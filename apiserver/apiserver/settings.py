@@ -94,6 +94,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "simple_history.middleware.HistoryRequestMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 if BINDALL_ENV:
@@ -141,7 +142,7 @@ DATABASES = {
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.memcached.MemcachedCache",
+        "BACKEND": "django.core.cache.backends.memcached.PyMemcacheCache",
         "LOCATION": "127.0.0.1:11211",
         "TIMEOUT": None,
     }
