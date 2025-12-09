@@ -1,6 +1,7 @@
 import django
 import os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'apiserver.settings'
+
+os.environ["DJANGO_SETTINGS_MODULE"] = "apiserver.settings"
 django.setup()
 
 from apiserver.api import models
@@ -12,7 +13,9 @@ for m in members:
     last_name = m.last_name
     preferred_name = m.preferred_name
 
-    print('Updating:', first_name, last_name, '-->', first_name.title(), last_name.title())
+    print(
+        "Updating:", first_name, last_name, "-->", first_name.title(), last_name.title()
+    )
 
     models.Member.objects.filter(id=m.id).update(
         first_name=first_name.title().strip(),
@@ -20,4 +23,4 @@ for m in members:
         preferred_name=preferred_name.title().strip(),
     )
 
-print('Done.')
+print("Done.")

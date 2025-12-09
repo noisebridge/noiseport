@@ -11,20 +11,23 @@ import subprocess
 import time
 
 if settings.DEBUG:
-    API_FOLDER = '.'
-    DATA_FOLDER = './data'
-    BACKUP_FOLDER = './backups'
+    API_FOLDER = "."
+    DATA_FOLDER = "./data"
+    BACKUP_FOLDER = "./backups"
 else:
-    API_FOLDER = '/opt/spaceport/apiserver'
-    DATA_FOLDER = '/opt/spaceport/apiserver/data'
-    BACKUP_FOLDER = '/opt/spaceport/apiserver/backups'
+    API_FOLDER = "/opt/spaceport/apiserver"
+    DATA_FOLDER = "/opt/spaceport/apiserver/data"
+    BACKUP_FOLDER = "/opt/spaceport/apiserver/backups"
 
-backup_id_string = lambda x: '{}\t{}\t{}'.format(
-    str(now()), x['name'], x['backup_id'],
+backup_id_string = lambda x: "{}\t{}\t{}".format(
+    str(now()),
+    x["name"],
+    x["backup_id"],
 )
 
+
 class Command(BaseCommand):
-    help = 'Generate backups.'
+    help = "Generate backups."
 
     @transaction.atomic
     def generate_backups(self):
@@ -36,57 +39,59 @@ class Command(BaseCommand):
                 id=0,
                 defaults=dict(backup_id=backup_id_string(user)),
             )
-            with open(DATA_FOLDER + '/backup_user.txt', 'w') as f:
-                f.write(user['name'] + '\n')
-            with open(DATA_FOLDER + '/static/123e4567-e89b-12d3-a456-426655440000.jpg', 'w') as f:
-                f.write(backup_id_string(user) + '\n')
+            with open(DATA_FOLDER + "/backup_user.txt", "w") as f:
+                f.write(user["name"] + "\n")
+            with open(
+                DATA_FOLDER + "/static/123e4567-e89b-12d3-a456-426655440000.jpg", "w"
+            ) as f:
+                f.write(backup_id_string(user) + "\n")
 
-            if user['name'] == 'null':  # reset the canaries for data-at-rest
+            if user["name"] == "null":  # reset the canaries for data-at-rest
                 continue
 
-            file_name = 'spaceport-backup-{}.tar.gz'.format(
+            file_name = "spaceport-backup-{}.tar.gz".format(
                 str(now().date()),
             )
 
             path_name = str(uuid4())
 
-            full_name = '{}/{}/{}'.format(
+            full_name = "{}/{}/{}".format(
                 BACKUP_FOLDER,
                 path_name,
                 file_name,
             )
 
             mkdir_command = [
-                'mkdir',
-                BACKUP_FOLDER + '/' + path_name,
+                "mkdir",
+                BACKUP_FOLDER + "/" + path_name,
             ]
 
             tar_command = [
-                'tar',
-                '-czf',
+                "tar",
+                "-czf",
                 full_name,
-                '--directory',
+                "--directory",
                 API_FOLDER,
-                'data/',
+                "data/",
             ]
 
             subprocess.run(mkdir_command, check=True)
             subprocess.run(tar_command, check=True)
 
-            cache.set(user['cache_key'], path_name + '/' + file_name)
+            cache.set(user["cache_key"], path_name + "/" + file_name)
 
-            self.stdout.write('Wrote backup for: ' + user['name'])
+            self.stdout.write("Wrote backup for: " + user["name"])
             count += 1
 
         return count
 
     def handle(self, *args, **options):
-        self.stdout.write('{} - Generating backups'.format(str(now())))
+        self.stdout.write("{} - Generating backups".format(str(now())))
         start = time.time()
 
         count = self.generate_backups()
-        self.stdout.write('Generated {} backups'.format(count))
+        self.stdout.write("Generated {} backups".format(count))
 
-        self.stdout.write('Completed backups in {} s'.format(
-            str(time.time() - start)[:4]
-        ))
+        self.stdout.write(
+            "Completed backups in {} s".format(str(time.time() - start)[:4])
+        )

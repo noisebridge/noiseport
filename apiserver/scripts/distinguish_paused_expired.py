@@ -3,7 +3,8 @@
 
 import django
 import os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'apiserver.settings'
+
+os.environ["DJANGO_SETTINGS_MODULE"] = "apiserver.settings"
 django.setup()
 
 from dateutil import relativedelta
@@ -14,20 +15,20 @@ members = models.Member.objects.all()
 count = 0
 
 for m in members:
-    if m.paused_date and m.status == 'Former Member':
-        print('Former member', m.preferred_name, m.last_name)
+    if m.paused_date and m.status == "Former Member":
+        print("Former member", m.preferred_name, m.last_name)
 
         if m.paused_date == m.expire_date:
-            new_status = 'Expired Member'
+            new_status = "Expired Member"
             new_paused_date = m.paused_date + relativedelta.relativedelta(months=3)
-            print('    Moving paused date', m.paused_date, '-->', new_paused_date)
+            print("    Moving paused date", m.paused_date, "-->", new_paused_date)
             m.paused_date = new_paused_date
         else:
-            new_status = 'Paused Member'
+            new_status = "Paused Member"
 
-        print('    Setting status to', new_status)
+        print("    Setting status to", new_status)
         m.status = new_status
         count += 1
         m.save()
 
-print('Processed', count)
+print("Processed", count)

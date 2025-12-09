@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(__name__)
 
 from django.contrib.auth.models import User
@@ -9,7 +10,12 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator
 from rest_auth.registration.serializers import RegisterSerializer
-from rest_auth.serializers import PasswordChangeSerializer, PasswordResetSerializer, PasswordResetConfirmSerializer, LoginSerializer
+from rest_auth.serializers import (
+    PasswordChangeSerializer,
+    PasswordResetSerializer,
+    PasswordResetConfirmSerializer,
+    LoginSerializer,
+)
 import re
 import datetime
 import time
@@ -19,133 +25,177 @@ from . import models, fields, utils, utils_ldap, utils_auth, utils_stats
 from .. import settings, secrets
 from .permissions import is_admin_director
 
+
 class UsageSerializer(serializers.ModelSerializer):
     first_name = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Usage
-        fields = '__all__'
+        fields = "__all__"
 
     def get_first_name(self, obj):
         return obj.user.member.preferred_name
+
 
 class ProtocoinTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Transaction
         fields = [
-            'id',
-            'date',
-            'protocoin',
-            'account_type',
-            'category',
+            "id",
+            "date",
+            "protocoin",
+            "account_type",
+            "category",
         ]
+
 
 class TransactionSerializer(serializers.ModelSerializer):
     # fields directly from old portal. replace with slugs we want
-    account_type = serializers.ChoiceField([
-        'Interac',
-        'TD Chequing',
-        'Dream Pmt',
-        'PayPal',
-        'Square Pmt',
-        'Member',
-        'Clearing',
-        'Cash',
-        'Protocoin',
-    ])
-    category = serializers.ChoiceField([
-        'Membership',
-        'OnAcct',
-        'Snacks',
-        'Donation',
-        'Consumables',
-        'Purchases',
-        'Garage Sale',
-        'Reimburse',
-        'Other',
-        'Exchange',
-    ])
+    account_type = serializers.ChoiceField(
+        [
+            "Interac",
+            "TD Chequing",
+            "Dream Pmt",
+            "PayPal",
+            "Square Pmt",
+            "Member",
+            "Clearing",
+            "Cash",
+            "Protocoin",
+        ]
+    )
+    category = serializers.ChoiceField(
+        [
+            "Membership",
+            "OnAcct",
+            "Snacks",
+            "Donation",
+            "Consumables",
+            "Purchases",
+            "Garage Sale",
+            "Reimburse",
+            "Other",
+            "Exchange",
+        ]
+    )
     member_id = serializers.SerializerMethodField()
     member_name = serializers.SerializerMethodField()
     date = serializers.DateField()
-    report_type = serializers.ChoiceField([
-        'Unmatched Member',
-        'Unmatched Purchase',
-        'User Flagged',
-    ], allow_null=True, required=False)
-    number_of_membership_months = serializers.IntegerField(max_value=36, min_value=-36, default=0)
+    report_type = serializers.ChoiceField(
+        [
+            "Unmatched Member",
+            "Unmatched Purchase",
+            "User Flagged",
+        ],
+        allow_null=True,
+        required=False,
+    )
+    number_of_membership_months = serializers.IntegerField(
+        max_value=36, min_value=-36, default=0
+    )
     recorder = serializers.SerializerMethodField()
     amount = serializers.DecimalField(max_digits=7, decimal_places=2, default=0)
     protocoin = serializers.DecimalField(max_digits=7, decimal_places=2, default=0)
 
     class Meta:
         model = models.Transaction
-        fields = '__all__'
+        fields = "__all__"
         read_only_fields = [
-            'id',
-            'user',
-            'recorder',
-            'paypal_txn_id',
-            'paypal_txn_type',
-            'paypal_payer_id',
+            "id",
+            "user",
+            "recorder",
+            "paypal_txn_id",
+            "paypal_txn_type",
+            "paypal_payer_id",
         ]
 
     def validate_transaction(self, validated_data):
-        if not self.initial_data.get('member_id', None):
-            raise ValidationError(dict(member_id='This field is required.'))
+        if not self.initial_data.get("member_id", None):
+            raise ValidationError(dict(member_id="This field is required."))
 
-        member = get_object_or_404(models.Member, id=self.initial_data['member_id'])
-        validated_data['user'] = member.user
+        member = get_object_or_404(models.Member, id=self.initial_data["member_id"])
+        validated_data["user"] = member.user
 
-        if validated_data['account_type'] == 'Protocoin':
-            validated_data['amount'] = 0
+        if validated_data["account_type"] == "Protocoin":
+            validated_data["amount"] = 0
         else:
-            validated_data['protocoin'] = 0
+            validated_data["protocoin"] = 0
 
-        if validated_data['category'] != 'Membership':
-            validated_data['number_of_membership_months'] = 0
+        if validated_data["category"] != "Membership":
+            validated_data["number_of_membership_months"] = 0
 
-        if validated_data['category'] == 'Membership' and not validated_data['number_of_membership_months']:
-            raise ValidationError(dict(number_of_membership_months='This field is required.'))
+        if (
+            validated_data["category"] == "Membership"
+            and not validated_data["number_of_membership_months"]
+        ):
+            raise ValidationError(
+                dict(number_of_membership_months="This field is required.")
+            )
 
-        if validated_data['account_type'] == 'Protocoin' and validated_data['category'] == 'Exchange':
-            raise ValidationError(dict(category='Can\'t purchase Protocoin with Protocoin.'))
+        if (
+            validated_data["account_type"] == "Protocoin"
+            and validated_data["category"] == "Exchange"
+        ):
+            raise ValidationError(
+                dict(category="Can't purchase Protocoin with Protocoin.")
+            )
 
-        if validated_data['category'] == 'Exchange':
-            if validated_data['amount'] == 0:
-                raise ValidationError(dict(category='Can\'t purchase 0 Protocoin.'))
-            validated_data['protocoin'] = validated_data['amount']
+        if validated_data["category"] == "Exchange":
+            if validated_data["amount"] == 0:
+                raise ValidationError(dict(category="Can't purchase 0 Protocoin."))
+            validated_data["protocoin"] = validated_data["amount"]
 
-        if validated_data['account_type'] == 'Protocoin':
-            if validated_data['protocoin'] == 0:
-                raise ValidationError(dict(account_type='Can\'t have a 0.00 protocoin transaction.'))
+        if validated_data["account_type"] == "Protocoin":
+            if validated_data["protocoin"] == 0:
+                raise ValidationError(
+                    dict(account_type="Can't have a 0.00 protocoin transaction.")
+                )
 
-        if validated_data['account_type'] not in ['Clearing', 'Protocoin']:
-            if validated_data['amount'] == 0:
-                raise ValidationError(dict(account_type='Can\'t have a $0.00 {} transaction. Do you want "Membership Adjustment"?'.format(validated_data['account_type'])))
+        if validated_data["account_type"] not in ["Clearing", "Protocoin"]:
+            if validated_data["amount"] == 0:
+                raise ValidationError(
+                    dict(
+                        account_type='Can\'t have a $0.00 {} transaction. Do you want "Membership Adjustment"?'.format(
+                            validated_data["account_type"]
+                        )
+                    )
+                )
 
-        if validated_data['account_type'] in ['Interac', 'Dream Pmt', 'Square Pmt', 'PayPal']:
-            if not validated_data.get('reference_number', None):
-                raise ValidationError(dict(reference_number='This field is required.'))
+        if validated_data["account_type"] in [
+            "Interac",
+            "Dream Pmt",
+            "Square Pmt",
+            "PayPal",
+        ]:
+            if not validated_data.get("reference_number", None):
+                raise ValidationError(dict(reference_number="This field is required."))
 
         return validated_data
 
     def create(self, validated_data):
         validated_data = self.validate_transaction(validated_data)
 
-        if validated_data['protocoin'] < 0:
-            user = validated_data['user']
-            current_protocoin = user.transactions.aggregate(Sum('protocoin'))['protocoin__sum'] or 0
-            new_protocoin = current_protocoin + validated_data['protocoin']
+        if validated_data["protocoin"] < 0:
+            user = validated_data["user"]
+            current_protocoin = (
+                user.transactions.aggregate(Sum("protocoin"))["protocoin__sum"] or 0
+            )
+            new_protocoin = current_protocoin + validated_data["protocoin"]
             if new_protocoin < 0:
-                raise ValidationError(dict(category='Insufficient funds. Member only has {} protocoin.'.format(current_protocoin)))
+                raise ValidationError(
+                    dict(
+                        category="Insufficient funds. Member only has {} protocoin.".format(
+                            current_protocoin
+                        )
+                    )
+                )
 
-        if validated_data['account_type'] == 'PayPal':
-            msg = 'Manual PayPal transaction added:\n' + str(validated_data)
+        if validated_data["account_type"] == "PayPal":
+            msg = "Manual PayPal transaction added:\n" + str(validated_data)
             utils.alert_tanner(msg)
 
-        if validated_data['account_type'] == 'Protocoin':
-            msg = 'Manual Protocoin transaction added:\n' + str(validated_data)
+        if validated_data["account_type"] == "Protocoin":
+            msg = "Manual Protocoin transaction added:\n" + str(validated_data)
             utils.alert_tanner(msg)
 
         return super().create(validated_data)
@@ -153,26 +203,30 @@ class TransactionSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         validated_data = self.validate_transaction(validated_data)
 
-        if validated_data['protocoin'] < 0:
-            user = validated_data['user']
+        if validated_data["protocoin"] < 0:
+            user = validated_data["user"]
             # when updating, we need to subtract out the transaction being edited
-            current_protocoin = (user.transactions.aggregate(Sum('protocoin'))['protocoin__sum'] or 0) - instance.protocoin
-            new_protocoin = current_protocoin + validated_data['protocoin']
+            current_protocoin = (
+                user.transactions.aggregate(Sum("protocoin"))["protocoin__sum"] or 0
+            ) - instance.protocoin
+            new_protocoin = current_protocoin + validated_data["protocoin"]
             if new_protocoin < 0:
-                msg = 'Negative Protocoin transaction updated:\n' + str(validated_data)
+                msg = "Negative Protocoin transaction updated:\n" + str(validated_data)
                 utils.alert_tanner(msg)
 
         return super().update(instance, validated_data)
 
     def get_member_id(self, obj):
-        if not obj.user: return None
+        if not obj.user:
+            return None
         return obj.user.member.id
 
     def get_member_name(self, obj):
-        if not obj.user: return 'Unknown'
+        if not obj.user:
+            return "Unknown"
 
         member = obj.user.member
-        return member.preferred_name + ' ' + member.last_name
+        return member.preferred_name + " " + member.last_name
 
     def get_recorder(self, obj):
         if obj.recorder:
@@ -193,26 +247,26 @@ class OtherMemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Member
         fields = [
-            'id',
-            'preferred_name',
-            'last_name',
-            'status',
-            'current_start_date',
-            'application_date',
-            'vetted_date',
-            'photo_small',
-            'public_bio',
-            'pinball_score',
-            'storage',
-            'signup_helper',
-            'discourse_username',
+            "id",
+            "preferred_name",
+            "last_name",
+            "status",
+            "current_start_date",
+            "application_date",
+            "vetted_date",
+            "photo_small",
+            "public_bio",
+            "pinball_score",
+            "storage",
+            "signup_helper",
+            "discourse_username",
         ]
 
     def get_last_name(self, obj):
         if len(obj.last_name):
-            return obj.last_name[0] + '.'
+            return obj.last_name[0] + "."
         else:
-            return ''
+            return ""
 
     def get_storage(self, obj):
         serializer = SimpleStorageSpaceSerializer(data=obj.user.storage, many=True)
@@ -220,10 +274,12 @@ class OtherMemberSerializer(serializers.ModelSerializer):
         return serializer.data
 
     def get_signup_helper(self, obj):
-        if not obj.signup_helper: return None
+        if not obj.signup_helper:
+            return None
         member = obj.signup_helper.member
-        name = member.preferred_name + ' ' + member.last_name[0] + '.'
+        name = member.preferred_name + " " + member.last_name[0] + "."
         return dict(name=name, id=member.id)
+
 
 # vetted member viewing other members
 class VettedOtherMemberSerializer(serializers.ModelSerializer):
@@ -234,20 +290,20 @@ class VettedOtherMemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Member
         fields = [
-            'id',
-            'preferred_name',
-            'last_name',
-            'status',
-            'current_start_date',
-            'application_date',
-            'vetted_date',
-            'photo_small',
-            'photo_large',
-            'public_bio',
-            'pinball_score',
-            'storage',
-            'signup_helper',
-            'discourse_username',
+            "id",
+            "preferred_name",
+            "last_name",
+            "status",
+            "current_start_date",
+            "application_date",
+            "vetted_date",
+            "photo_small",
+            "photo_large",
+            "public_bio",
+            "pinball_score",
+            "storage",
+            "signup_helper",
+            "discourse_username",
         ]
 
     def get_storage(self, obj):
@@ -256,9 +312,10 @@ class VettedOtherMemberSerializer(serializers.ModelSerializer):
         return serializer.data
 
     def get_signup_helper(self, obj):
-        if not obj.signup_helper: return None
+        if not obj.signup_helper:
+            return None
         member = obj.signup_helper.member
-        name = member.preferred_name + ' ' + member.last_name
+        name = member.preferred_name + " " + member.last_name
         return dict(name=name, id=member.id)
 
 
@@ -276,42 +333,42 @@ class MemberSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Member
-        fields = '__all__'
+        fields = "__all__"
         read_only_fields = [
-            'id',
-            'is_director',
-            'is_staff',
-            'is_instructor',
-            'first_name',
-            'last_name',
-            'status',
-            'expire_date',
-            'current_start_date',
-            'application_date',
-            'vetted_date',
-            'paused_date',
-            'monthly_fees',
-            'photo_large',
-            'photo_medium',
-            'photo_small',
-            'member_forms',
-            'card_photo',
-            'user',
-            'old_email',
-            'orientation_date',
-            'lathe_cert_date',
-            'mill_cert_date',
-            'wood_cert_date',
-            'wood2_cert_date',
-            'tormach_cnc_cert_date',
-            'precix_cnc_cert_date',
-            'embroidery_cert_date',
-            'rabbit_cert_date',
-            'trotec_cert_date',
-            'scanner_cert_date',
-            'is_allowed_entry',
-            'mediawiki_username',
-            'signup_helper',
+            "id",
+            "is_director",
+            "is_staff",
+            "is_instructor",
+            "first_name",
+            "last_name",
+            "status",
+            "expire_date",
+            "current_start_date",
+            "application_date",
+            "vetted_date",
+            "paused_date",
+            "monthly_fees",
+            "photo_large",
+            "photo_medium",
+            "photo_small",
+            "member_forms",
+            "card_photo",
+            "user",
+            "old_email",
+            "orientation_date",
+            "lathe_cert_date",
+            "mill_cert_date",
+            "wood_cert_date",
+            "wood2_cert_date",
+            "tormach_cnc_cert_date",
+            "precix_cnc_cert_date",
+            "embroidery_cert_date",
+            "rabbit_cert_date",
+            "trotec_cert_date",
+            "scanner_cert_date",
+            "is_allowed_entry",
+            "mediawiki_username",
+            "signup_helper",
         ]
 
     def get_sponsored_by(self, obj):
@@ -322,33 +379,34 @@ class MemberSerializer(serializers.ModelSerializer):
 
     def get_protocoin(self, obj):
         transactions = obj.user.transactions
-        total = transactions.aggregate(Sum('protocoin'))['protocoin__sum'] or 0
+        total = transactions.aggregate(Sum("protocoin"))["protocoin__sum"] or 0
         return total
 
     def get_total_protocoin(self, obj):
         transactions = models.Transaction.objects
-        total = transactions.aggregate(Sum('protocoin'))['protocoin__sum'] or 0
+        total = transactions.aggregate(Sum("protocoin"))["protocoin__sum"] or 0
         return total
 
     def get_signup_helper(self, obj):
-        if not obj.signup_helper: return None
+        if not obj.signup_helper:
+            return None
         member = obj.signup_helper.member
-        name = member.preferred_name + ' ' + member.last_name
+        name = member.preferred_name + " " + member.last_name
         return dict(name=name, id=member.id)
 
     def update(self, instance, validated_data):
-        instance.user.email = validated_data.get('email', instance.user.email)
+        instance.user.email = validated_data.get("email", instance.user.email)
         instance.user.save()
 
-        photo = validated_data.get('photo', None)
-        crop = validated_data.get('crop', None)
+        photo = validated_data.get("photo", None)
+        crop = validated_data.get("crop", None)
         if photo:
             small, medium, large = utils.process_image_upload(photo, crop)
             instance.photo_small = small
             instance.photo_medium = medium
             instance.photo_large = large
 
-        helper_id = self.initial_data.get('helper_id', None)
+        helper_id = self.initial_data.get("helper_id", None)
         if helper_id:
             signup_helper = get_object_or_404(models.Member, id=helper_id)
             instance.signup_helper = signup_helper.user
@@ -359,39 +417,61 @@ class MemberSerializer(serializers.ModelSerializer):
             and instance.application_date > datetime.date(2024, 4, 23)
             and models.Member.objects.count() > 1
         ):
-            raise ValidationError(dict(helper_id='This field is required.'))
+            raise ValidationError(dict(helper_id="This field is required."))
 
-        is_student = self.initial_data.get('is_student', False)
+        is_student = self.initial_data.get("is_student", False)
         if is_student:
             instance.monthly_fees = 35
 
-        if 'discourse_username' in validated_data:
-            changed = validated_data['discourse_username'] != instance.discourse_username
+        if "discourse_username" in validated_data:
+            changed = (
+                validated_data["discourse_username"] != instance.discourse_username
+            )
             if changed and utils_auth.discourse_is_configured():
                 username = instance.discourse_username
-                new_username = validated_data['discourse_username']
-                logger.info('Changing discourse_username from %s to %s', username, new_username)
+                new_username = validated_data["discourse_username"]
+                logger.info(
+                    "Changing discourse_username from %s to %s", username, new_username
+                )
                 if utils_auth.change_discourse_username(username, new_username) != 200:
-                    msg = 'Problem connecting to Discourse Auth server: change username.'
+                    msg = (
+                        "Problem connecting to Discourse Auth server: change username."
+                    )
                     utils.alert_tanner(msg)
                     logger.info(msg)
-                    raise ValidationError(dict(discourse_username='Invalid Discourse username.'))
+                    raise ValidationError(
+                        dict(discourse_username="Invalid Discourse username.")
+                    )
 
-        if validated_data.get('allow_last_scanned', None) == True:
-            changed = validated_data['allow_last_scanned'] != instance.allow_last_scanned
+        if validated_data.get("allow_last_scanned", None) == True:
+            changed = (
+                validated_data["allow_last_scanned"] != instance.allow_last_scanned
+            )
             ONE_WEEK = now() - datetime.timedelta(days=7)
-            if changed and models.HistoryChange.objects.filter(
-                field='allow_last_scanned',
-                index__history_user__member__id=instance.id,
-                index__owner_id=instance.id,
-                index__history_date__gte=ONE_WEEK,
-            ).count() >= 6:
-                msg = 'Member allow_last_scanned rate limit exceeded by: ' + instance.preferred_name + ' ' + instance.last_name
+            if (
+                changed
+                and models.HistoryChange.objects.filter(
+                    field="allow_last_scanned",
+                    index__history_user__member__id=instance.id,
+                    index__owner_id=instance.id,
+                    index__history_date__gte=ONE_WEEK,
+                ).count()
+                >= 6
+            ):
+                msg = (
+                    "Member allow_last_scanned rate limit exceeded by: "
+                    + instance.preferred_name
+                    + " "
+                    + instance.last_name
+                )
                 utils.alert_tanner(msg)
                 logger.info(msg)
-                raise ValidationError(dict(allow_last_scanned='You\'re doing that too often.'))
+                raise ValidationError(
+                    dict(allow_last_scanned="You're doing that too often.")
+                )
 
         return super().update(instance, validated_data)
+
 
 # admin viewing member details
 class AdminMemberSerializer(MemberSerializer):
@@ -400,59 +480,60 @@ class AdminMemberSerializer(MemberSerializer):
 
     class Meta:
         model = models.Member
-        fields = '__all__'
+        fields = "__all__"
         read_only_fields = [
-            'id',
-            'status',
-            'expire_date',
-            'paused_date',
-            'photo_large',
-            'photo_medium',
-            'photo_small',
-            'member_forms',
-            'card_photo',
-            'user',
-            'old_email',
-            'is_director',
-            'is_staff',
-            'mediawiki_username',
+            "id",
+            "status",
+            "expire_date",
+            "paused_date",
+            "photo_large",
+            "photo_medium",
+            "photo_small",
+            "member_forms",
+            "card_photo",
+            "user",
+            "old_email",
+            "is_director",
+            "is_staff",
+            "mediawiki_username",
         ]
 
     def update(self, instance, validated_data):
-        if 'is_allowed_entry' in validated_data:
-            changed = validated_data['is_allowed_entry'] != instance.is_allowed_entry
+        if "is_allowed_entry" in validated_data:
+            changed = validated_data["is_allowed_entry"] != instance.is_allowed_entry
             if changed:
                 utils_stats.changed_card()
 
-        if 'precix_cnc_cert_date' in validated_data:
-            changed = validated_data['precix_cnc_cert_date'] != instance.precix_cnc_cert_date
+        if "precix_cnc_cert_date" in validated_data:
+            changed = (
+                validated_data["precix_cnc_cert_date"] != instance.precix_cnc_cert_date
+            )
             if changed:
-                if validated_data['precix_cnc_cert_date']:
-                    utils_ldap.add_to_group(instance, 'CNC-Precix-Users')
+                if validated_data["precix_cnc_cert_date"]:
+                    utils_ldap.add_to_group(instance, "CNC-Precix-Users")
                 else:
-                    utils_ldap.remove_from_group(instance, 'CNC-Precix-Users')
+                    utils_ldap.remove_from_group(instance, "CNC-Precix-Users")
 
-        if 'rabbit_cert_date' in validated_data:
-            changed = validated_data['rabbit_cert_date'] != instance.rabbit_cert_date
+        if "rabbit_cert_date" in validated_data:
+            changed = validated_data["rabbit_cert_date"] != instance.rabbit_cert_date
             if changed:
-                if validated_data['rabbit_cert_date']:
-                    utils_ldap.add_to_group(instance, 'Laser Users')
+                if validated_data["rabbit_cert_date"]:
+                    utils_ldap.add_to_group(instance, "Laser Users")
                 else:
-                    utils_ldap.remove_from_group(instance, 'Laser Users')
+                    utils_ldap.remove_from_group(instance, "Laser Users")
 
-        if 'trotec_cert_date' in validated_data:
-            changed = validated_data['trotec_cert_date'] != instance.trotec_cert_date
+        if "trotec_cert_date" in validated_data:
+            changed = validated_data["trotec_cert_date"] != instance.trotec_cert_date
             if changed:
-                if validated_data['trotec_cert_date']:
-                    utils_ldap.add_to_group(instance, 'Trotec Users')
+                if validated_data["trotec_cert_date"]:
+                    utils_ldap.add_to_group(instance, "Trotec Users")
                 else:
-                    utils_ldap.remove_from_group(instance, 'Trotec Users')
+                    utils_ldap.remove_from_group(instance, "Trotec Users")
 
-        if 'vetted_date' in validated_data:
-            changed = validated_data['vetted_date'] != instance.vetted_date
+        if "vetted_date" in validated_data:
+            changed = validated_data["vetted_date"] != instance.vetted_date
             if changed:
-                if validated_data['vetted_date']:
-
+                if validated_data["vetted_date"]:
                     # TODO: fix bug where admin editing vetted date doesn't cause
                     #       the changes to apply. this is because the PATCH request
                     #       includes empty cert values which overrides this.
@@ -462,13 +543,13 @@ class AdminMemberSerializer(MemberSerializer):
                         user=instance.user,
                         session__course__id=PRECIX_COURSE,
                         session__datetime__gte=instance.current_start_date,
-                        attendance_status='Attended',
+                        attendance_status="Attended",
                     ).exists()
 
                     if attended_precix:
-                        logging.info('Auto-certifying precix...')
+                        logging.info("Auto-certifying precix...")
                         if utils_ldap.is_configured():
-                            utils_ldap.add_to_group(instance, 'CNC-Precix-Users')
+                            utils_ldap.add_to_group(instance, "CNC-Precix-Users")
                         instance.precix_cnc_cert_date = utils.today_alberta_tz()
 
                     RABBIT_COURSE = 247
@@ -476,13 +557,13 @@ class AdminMemberSerializer(MemberSerializer):
                         user=instance.user,
                         session__course__id=RABBIT_COURSE,
                         session__datetime__gte=instance.current_start_date,
-                        attendance_status='Attended',
+                        attendance_status="Attended",
                     ).exists()
 
                     if attended_rabbit:
-                        logging.info('Auto-certifying rabbit...')
+                        logging.info("Auto-certifying rabbit...")
                         if utils_ldap.is_configured():
-                            utils_ldap.add_to_group(instance, 'Laser Users')
+                            utils_ldap.add_to_group(instance, "Laser Users")
                         instance.rabbit_cert_date = utils.today_alberta_tz()
 
                     TROTEC_COURSE = 321
@@ -490,13 +571,13 @@ class AdminMemberSerializer(MemberSerializer):
                         user=instance.user,
                         session__course__id=TROTEC_COURSE,
                         session__datetime__gte=instance.current_start_date,
-                        attendance_status='Attended',
+                        attendance_status="Attended",
                     ).exists()
 
                     if attended_trotec:
-                        logging.info('Auto-certifying trotec...')
+                        logging.info("Auto-certifying trotec...")
                         if utils_ldap.is_configured():
-                            utils_ldap.add_to_group(instance, 'Trotec Users')
+                            utils_ldap.add_to_group(instance, "Trotec Users")
                         instance.trotec_cert_date = utils.today_alberta_tz()
 
                 else:
@@ -515,6 +596,7 @@ class SearchSerializer(serializers.Serializer):
         serializer = OtherMemberSerializer(obj)
         return serializer.data
 
+
 # vetted member viewing member list or search result
 class VettedSearchSerializer(serializers.Serializer):
     q = serializers.CharField(write_only=True, max_length=64)
@@ -524,6 +606,7 @@ class VettedSearchSerializer(serializers.Serializer):
     def get_member(self, obj):
         serializer = VettedOtherMemberSerializer(obj)
         return serializer.data
+
 
 # instructor viewing search result
 class InstructorSearchSerializer(serializers.Serializer):
@@ -540,13 +623,14 @@ class InstructorSearchSerializer(serializers.Serializer):
         serializer.is_valid()
         return serializer.data
 
+
 # admin viewing search result
 class AdminSearchSerializer(serializers.Serializer):
     cards = serializers.SerializerMethodField()
     member = serializers.SerializerMethodField()
     training = serializers.SerializerMethodField()
     transactions = serializers.SerializerMethodField()
-    #usages = serializers.SerializerMethodField()
+    # usages = serializers.SerializerMethodField()
 
     def get_member(self, obj):
         serializer = AdminMemberSerializer(obj)
@@ -554,7 +638,7 @@ class AdminSearchSerializer(serializers.Serializer):
 
     def get_cards(self, obj):
         queryset = obj.user.cards
-        queryset = queryset.order_by('-last_seen')
+        queryset = queryset.order_by("-last_seen")
         serializer = CardSerializer(data=queryset, many=True)
         serializer.is_valid()
         return serializer.data
@@ -567,12 +651,12 @@ class AdminSearchSerializer(serializers.Serializer):
 
     def get_transactions(self, obj):
         queryset = obj.user.transactions
-        queryset = queryset.order_by('-date', '-id')
+        queryset = queryset.order_by("-date", "-id")
         serializer = TransactionSerializer(data=queryset, many=True)
         serializer.is_valid()
         return serializer.data
 
-    #def get_usages(self, obj):
+    # def get_usages(self, obj):
     #    queryset = obj.user.usages.order_by('-start_time')
     #    serializer = UsageSerializer(data=queryset, many=True)
     #    serializer.is_valid()
@@ -580,54 +664,61 @@ class AdminSearchSerializer(serializers.Serializer):
 
 
 class CardSerializer(serializers.ModelSerializer):
-    card_number = serializers.CharField(validators=[UniqueValidator(
-        queryset=models.Card.objects.all(),
-        message='Card number already exists.'
-    )])
+    card_number = serializers.CharField(
+        validators=[
+            UniqueValidator(
+                queryset=models.Card.objects.all(),
+                message="Card number already exists.",
+            )
+        ]
+    )
     member_id = serializers.SerializerMethodField()
-    active_status = serializers.ChoiceField([
-        'card_active',
-        'card_inactive',
-    ])
+    active_status = serializers.ChoiceField(
+        [
+            "card_active",
+            "card_inactive",
+        ]
+    )
 
     class Meta:
         model = models.Card
-        fields = '__all__'
+        fields = "__all__"
         read_only_fields = [
-            'id',
-            'last_seen',
-            'last_seen_at',
-            'user',
+            "id",
+            "last_seen",
+            "last_seen_at",
+            "user",
         ]
 
     def create(self, validated_data):
-        if not self.initial_data.get('member_id', None):
-            raise ValidationError(dict(member_id='This field is required.'))
+        if not self.initial_data.get("member_id", None):
+            raise ValidationError(dict(member_id="This field is required."))
 
-        member = get_object_or_404(models.Member, id=self.initial_data['member_id'])
-        validated_data['user'] = member.user
+        member = get_object_or_404(models.Member, id=self.initial_data["member_id"])
+        validated_data["user"] = member.user
 
         if not member.vetted_date:
-            raise ValidationError(dict(non_field_errors='Member not vetted yet.'))
+            raise ValidationError(dict(non_field_errors="Member not vetted yet."))
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        if not self.initial_data.get('member_id', None):
-            raise ValidationError(dict(member_id='This field is required.'))
+        if not self.initial_data.get("member_id", None):
+            raise ValidationError(dict(member_id="This field is required."))
 
-        member = get_object_or_404(models.Member, id=self.initial_data['member_id'])
-        validated_data['user'] = member.user
+        member = get_object_or_404(models.Member, id=self.initial_data["member_id"])
+        validated_data["user"] = member.user
         return super().update(instance, validated_data)
 
     def get_member_id(self, obj):
-        if not obj.user: return None
+        if not obj.user:
+            return None
         return obj.user.member.id
 
 
 class SimpleStorageSpaceSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.StorageSpace
-        fields = '__all__'
+        fields = "__all__"
 
 
 class StorageSpaceSerializer(serializers.ModelSerializer):
@@ -638,53 +729,59 @@ class StorageSpaceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.StorageSpace
-        fields = '__all__'
+        fields = "__all__"
         read_only_fields = [
-            'id',
-            'shelf_id',
-            'location',
-            'user',
+            "id",
+            "shelf_id",
+            "location",
+            "user",
         ]
 
     def update(self, instance, validated_data):
-        member_id = self.initial_data.get('member_id', None)
+        member_id = self.initial_data.get("member_id", None)
         if member_id:
             member = get_object_or_404(models.Member, id=member_id)
-            validated_data['user'] = member.user
+            validated_data["user"] = member.user
         else:
-            validated_data['user'] = None
+            validated_data["user"] = None
 
         return super().update(instance, validated_data)
 
     def get_member_id(self, obj):
-        if not obj.user: return None
+        if not obj.user:
+            return None
         return obj.user.member.id
 
     def get_member_name(self, obj):
-        if not obj.user: return None
+        if not obj.user:
+            return None
 
         member = obj.user.member
-        return member.preferred_name + ' ' + member.last_name
+        return member.preferred_name + " " + member.last_name
 
     def get_member_status(self, obj):
-        if not obj.user: return None
+        if not obj.user:
+            return None
         return obj.user.member.status
 
     def get_member_paused(self, obj):
-        if not obj.user: return None
+        if not obj.user:
+            return None
         return obj.user.member.paused_date
 
 
 class TrainingSerializer(serializers.ModelSerializer):
-    attendance_status = serializers.ChoiceField([
-        'Waiting for payment',
-        'Withdrawn',
-        'Rescheduled',
-        'Try-again',
-        'No-show',
-        'Attended',
-        'Confirmed'
-    ])
+    attendance_status = serializers.ChoiceField(
+        [
+            "Waiting for payment",
+            "Withdrawn",
+            "Rescheduled",
+            "Try-again",
+            "No-show",
+            "Attended",
+            "Confirmed",
+        ]
+    )
     session = serializers.PrimaryKeyRelatedField(queryset=models.Session.objects.all())
     student_name = serializers.SerializerMethodField()
     student_email = serializers.SerializerMethodField()
@@ -692,12 +789,12 @@ class TrainingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Training
-        fields = '__all__'
-        read_only_fields = ['user', 'sign_up_date', 'paid_date']
+        fields = "__all__"
+        read_only_fields = ["user", "sign_up_date", "paid_date"]
 
     def get_student_name(self, obj):
         member = obj.user.member
-        return member.preferred_name + ' ' + member.last_name
+        return member.preferred_name + " " + member.last_name
 
     def get_student_email(self, obj):
         return obj.user.email
@@ -706,13 +803,16 @@ class TrainingSerializer(serializers.ModelSerializer):
         return obj.user.member.id
 
     def update(self, instance, validated_data):
-        if validated_data['attendance_status'] == 'Waiting for payment' and instance.paid_date:
-            validated_data['attendance_status'] = 'Confirmed'
+        if (
+            validated_data["attendance_status"] == "Waiting for payment"
+            and instance.paid_date
+        ):
+            validated_data["attendance_status"] = "Confirmed"
         return super().update(instance, validated_data)
 
 
 class StudentTrainingSerializer(TrainingSerializer):
-    attendance_status = serializers.ChoiceField(['Waiting for payment', 'Withdrawn'])
+    attendance_status = serializers.ChoiceField(["Waiting for payment", "Withdrawn"])
 
 
 class CourseSerializer(serializers.ModelSerializer):
@@ -720,7 +820,8 @@ class CourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Course
-        fields = ['id', 'name', 'is_old', 'description', 'tags', 'num_interested']
+        fields = ["id", "name", "is_old", "description", "tags", "num_interested"]
+
 
 class CourseListSerializer(CourseSerializer):
     recent_date = serializers.DateTimeField(read_only=True)
@@ -728,16 +829,26 @@ class CourseListSerializer(CourseSerializer):
 
     class Meta:
         model = models.Course
-        fields = ['id', 'name', 'is_old', 'description', 'tags', 'num_interested', 'recent_date', 'is_archived']
+        fields = [
+            "id",
+            "name",
+            "is_old",
+            "description",
+            "tags",
+            "num_interested",
+            "recent_date",
+            "is_archived",
+        ]
 
     def get_is_archived(self, obj):
         fourteen_months_ago = utils.now_alberta_tz() - datetime.timedelta(days=425)
-        recent_date = getattr(obj, 'recent_date', None)
+        recent_date = getattr(obj, "recent_date", None)
 
         if recent_date == None or recent_date < fourteen_months_ago:
             return True
         else:
             return False
+
 
 class SessionSerializer(serializers.ModelSerializer):
     student_count = serializers.SerializerMethodField()
@@ -749,61 +860,68 @@ class SessionSerializer(serializers.ModelSerializer):
     course = serializers.PrimaryKeyRelatedField(queryset=models.Course.objects.all())
     students = TrainingSerializer(many=True, read_only=True)
     max_students = serializers.IntegerField(min_value=1, max_value=50, allow_null=True)
-    cost = serializers.DecimalField(max_digits=None, decimal_places=2, min_value=0, max_value=200)
+    cost = serializers.DecimalField(
+        max_digits=None, decimal_places=2, min_value=0, max_value=200
+    )
 
     class Meta:
         model = models.Session
-        fields = '__all__'
-        read_only_fields = ['old_instructor']
+        fields = "__all__"
+        read_only_fields = ["old_instructor"]
 
     def get_student_count(self, obj):
-        return len([x for x in obj.students.all() if x.attendance_status != 'Withdrawn'])
+        return len(
+            [x for x in obj.students.all() if x.attendance_status != "Withdrawn"]
+        )
 
     def get_course_data(self, obj):
         return CourseSerializer(obj.course).data
 
     def get_instructor_name(self, obj):
-        if obj.instructor and hasattr(obj.instructor, 'member'):
-            name = '{} {}.'.format(obj.instructor.member.preferred_name, obj.instructor.member.last_name[0])
+        if obj.instructor and hasattr(obj.instructor, "member"):
+            name = "{} {}.".format(
+                obj.instructor.member.preferred_name, obj.instructor.member.last_name[0]
+            )
         else:
-            name = 'Unknown'
+            name = "Unknown"
         return obj.old_instructor or name
 
     def get_instructor_id(self, obj):
-        if obj.instructor and hasattr(obj.instructor, 'member'):
+        if obj.instructor and hasattr(obj.instructor, "member"):
             return obj.instructor.member.id
         else:
             return None
 
     def get_instructor_discourse(self, obj):
-        if obj.instructor and hasattr(obj.instructor, 'member'):
+        if obj.instructor and hasattr(obj.instructor, "member"):
             return obj.instructor.member.discourse_username
         else:
             return None
 
     def create(self, validated_data):
-        if validated_data['datetime'] < now() - datetime.timedelta(days=2):
-            msg = 'Past class creation detected:\n' + str(validated_data)
+        if validated_data["datetime"] < now() - datetime.timedelta(days=2):
+            msg = "Past class creation detected:\n" + str(validated_data)
             utils.alert_tanner(msg)
-            raise ValidationError(dict(non_field_errors='Class can\'t be in the past.'))
+            raise ValidationError(dict(non_field_errors="Class can't be in the past."))
 
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        if not self.initial_data.get('instructor_id', None):
-            raise ValidationError(dict(instructor_id='This field is required.'))
+        if not self.initial_data.get("instructor_id", None):
+            raise ValidationError(dict(instructor_id="This field is required."))
 
-        if validated_data['datetime'] < now() - datetime.timedelta(days=2):
-            msg = 'Past class modification detected:\n' + str(validated_data)
+        if validated_data["datetime"] < now() - datetime.timedelta(days=2):
+            msg = "Past class modification detected:\n" + str(validated_data)
             utils.alert_tanner(msg)
-            raise ValidationError(dict(non_field_errors='Can\'t modify past class.'))
+            raise ValidationError(dict(non_field_errors="Can't modify past class."))
 
-        member = get_object_or_404(models.Member, id=self.initial_data['instructor_id'])
+        member = get_object_or_404(models.Member, id=self.initial_data["instructor_id"])
         if not (is_admin_director(member.user) or member.is_instructor):
-            raise ValidationError(dict(instructor_id='Member is not an instructor.'))
+            raise ValidationError(dict(instructor_id="Member is not an instructor."))
 
-        validated_data['instructor'] = member.user
+        validated_data["instructor"] = member.user
         return super().update(instance, validated_data)
+
 
 class SessionListSerializer(SessionSerializer):
     students = None
@@ -814,9 +932,10 @@ class CourseDetailSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=100)
     description = fields.HTMLField(max_length=6000)
     suggestion = serializers.SerializerMethodField()
+
     class Meta:
         model = models.Course
-        fields = '__all__'
+        fields = "__all__"
 
     def get_suggestion(self, obj):
         def iter_dates():
@@ -848,9 +967,9 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             else:
                 return False
 
-        prev_session = obj.sessions.order_by('datetime').last()
+        prev_session = obj.sessions.order_by("datetime").last()
 
-        if obj.id == 273: # monthly clean 10:00 AM 3rd Saturday of each month
+        if obj.id == 273:  # monthly clean 10:00 AM 3rd Saturday of each month
             date = next_date(calendar.SATURDAY, week_num=3)
             time = datetime.time(10, 0)
             dt = datetime.datetime.combine(date, time)
@@ -863,7 +982,9 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             next_month = next_date(calendar.WEDNESDAY, week_num=3).month
             if next_month == 12:
                 one_month_ahead = utils.today_alberta_tz() + datetime.timedelta(days=31)
-                date = next_date(calendar.THURSDAY, week_num=3, fake_start=one_month_ahead)
+                date = next_date(
+                    calendar.THURSDAY, week_num=3, fake_start=one_month_ahead
+                )
             elif next_month % 2 == 0:
                 date = next_date(calendar.WEDNESDAY, week_num=3)
             else:
@@ -896,17 +1017,21 @@ class CourseDetailSerializer(serializers.ModelSerializer):
 
 class UserTrainingSerializer(serializers.ModelSerializer):
     session = SessionListSerializer()
+
     class Meta:
         model = models.Training
-        exclude = ['user']
+        exclude = ["user"]
         depth = 2
+
 
 class InterestSerializer(serializers.ModelSerializer):
     course = serializers.PrimaryKeyRelatedField(queryset=models.Course.objects.all())
+
     class Meta:
         model = models.Interest
-        fields = '__all__'
-        read_only_fields = ['user', 'satisfied_by']
+        fields = "__all__"
+        read_only_fields = ["user", "satisfied_by"]
+
 
 class UserSerializer(serializers.ModelSerializer):
     training = UserTrainingSerializer(many=True)
@@ -922,28 +1047,28 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id',
-            'username',
-            'member',
-            'transactions',
-            'cards',
-            'training',
-            'is_staff',
-            'door_code',
-            'wifi_pass',
-            'gate_code',
-            'app_version',
+            "id",
+            "username",
+            "member",
+            "transactions",
+            "cards",
+            "training",
+            "is_staff",
+            "door_code",
+            "wifi_pass",
+            "gate_code",
+            "app_version",
             #'usages',
-            'interests',
-            'storage',
+            "interests",
+            "storage",
         ]
         depth = 1
 
     def get_transactions(self, obj):
         queryset = models.Transaction.objects.filter(user=obj)
-        queryset = queryset.select_related('user', 'user__member')
-        queryset = queryset.exclude(category='Memberships:Fake Months')
-        queryset = queryset.order_by('-id', '-date')
+        queryset = queryset.select_related("user", "user__member")
+        queryset = queryset.exclude(category="Memberships:Fake Months")
+        queryset = queryset.order_by("-id", "-date")
         serializer = TransactionSerializer(data=queryset, many=True)
         serializer.is_valid()
         return serializer.data
@@ -951,13 +1076,13 @@ class UserSerializer(serializers.ModelSerializer):
     def get_training(self, obj):
         queryset = obj.training
         queryset = queryset.select_related(
-            'session',
-            'session__course',
-            'session__instructor',
-            'session__instructor__member'
+            "session",
+            "session__course",
+            "session__instructor",
+            "session__instructor__member",
         )
-        queryset = queryset.prefetch_related('session__students')
-        queryset = queryset.order_by('-id')
+        queryset = queryset.prefetch_related("session__students")
+        queryset = queryset.order_by("-id")
         serializer = UserTrainingSerializer(data=queryset, many=True)
         serializer.is_valid()
         return serializer.data
@@ -991,66 +1116,73 @@ class MyRegisterSerializer(RegisterSerializer):
     request_id = serializers.CharField(required=False)
 
     def validate_username(self, username):
-        if re.search(r'[^a-z.]', username):
-            raise ValidationError('Invalid characters.')
-        if '..' in username:
-            raise ValidationError('Can\'t have double periods. Remove spaces.')
-        if username.startswith('.') or username.endswith('.'):
-            raise ValidationError('Can\'t start or end with periods.')
+        if re.search(r"[^a-z.]", username):
+            raise ValidationError("Invalid characters.")
+        if ".." in username:
+            raise ValidationError("Can't have double periods. Remove spaces.")
+        if username.startswith(".") or username.endswith("."):
+            raise ValidationError("Can't start or end with periods.")
         return super().validate_username(username)
 
     def custom_signup(self, request, user):
         data = request.data
 
         if not utils.is_request_from_protospace(request):
-            logger.info('Request not from protospace')
+            logger.info("Request not from protospace")
             user.delete()
-            raise ValidationError(dict(non_field_errors='Can only register from Protospace.'))
+            raise ValidationError(
+                dict(non_field_errors="Can only register from Protospace.")
+            )
 
-        if data['request_id']: utils_stats.set_progress(data['request_id'], 'Registering...')
+        if data["request_id"]:
+            utils_stats.set_progress(data["request_id"], "Registering...")
 
         utils.register_user(data, user)
 
+
 class MyPasswordChangeSerializer(PasswordChangeSerializer):
     def save(self):
-        request_id = self.request.data.get('request_id', '')
+        request_id = self.request.data.get("request_id", "")
 
         data = dict(
             username=self.user.username,
-            password1=self.request.data['new_password1'],
+            password1=self.request.data["new_password1"],
         )
 
         if utils_ldap.is_configured():
-            if request_id: utils_stats.set_progress(request_id, 'Changing LDAP password...')
+            if request_id:
+                utils_stats.set_progress(request_id, "Changing LDAP password...")
             if utils_ldap.set_password(data) != 200:
-                msg = 'Problem connecting to LDAP server: set.'
+                msg = "Problem connecting to LDAP server: set."
                 utils.alert_tanner(msg)
                 logger.info(msg)
                 raise ValidationError(dict(non_field_errors=msg))
 
         data = dict(
             username=self.user.username,
-            password=self.data['new_password1'],
+            password=self.data["new_password1"],
             email=self.user.email,
             first_name=self.user.member.preferred_name,
         )
 
-        data['username'] = self.user.member.mediawiki_username or self.user.username
+        data["username"] = self.user.member.mediawiki_username or self.user.username
 
         if utils_auth.wiki_is_configured():
-            if request_id: utils_stats.set_progress(request_id, 'Changing Wiki password...')
+            if request_id:
+                utils_stats.set_progress(request_id, "Changing Wiki password...")
             if utils_auth.set_wiki_password(data) != 200:
-                msg = 'Problem connecting to Wiki Auth server: set.'
+                msg = "Problem connecting to Wiki Auth server: set."
                 utils.alert_tanner(msg)
                 logger.info(msg)
                 raise ValidationError(dict(non_field_errors=msg))
 
-        data['username'] = self.user.member.discourse_username or self.user.username
+        data["username"] = self.user.member.discourse_username or self.user.username
 
         if utils_auth.discourse_is_configured():
-            if request_id: utils_stats.set_progress(request_id, 'Changing Discourse password...')
+            if request_id:
+                utils_stats.set_progress(request_id, "Changing Discourse password...")
             if utils_auth.set_discourse_password(data) != 200:
-                msg = 'Problem connecting to Discourse Auth server: set.'
+                msg = "Problem connecting to Discourse Auth server: set."
                 utils.alert_tanner(msg)
                 logger.info(msg)
                 raise ValidationError(dict(non_field_errors=msg))
@@ -1058,64 +1190,74 @@ class MyPasswordChangeSerializer(PasswordChangeSerializer):
                 self.user.member.discourse_username = self.user.username
                 self.user.member.save()
 
-        if request_id: utils_stats.set_progress(request_id, 'Changing Spaceport password...')
+        if request_id:
+            utils_stats.set_progress(request_id, "Changing Spaceport password...")
         time.sleep(1)
 
         super().save()
 
+
 class MyPasswordResetSerializer(PasswordResetSerializer):
     def validate_email(self, email):
         if not User.objects.filter(email__iexact=email).exists():
-            logging.info('Email not found: ' + email)
-            raise ValidationError('Not found.')
+            logging.info("Email not found: " + email)
+            raise ValidationError("Not found.")
         return super().validate_email(email)
 
     def save(self):
-        email = self.data['email']
+        email = self.data["email"]
         member = User.objects.get(email__iexact=email).member
-        logging.info('Password reset requested for: {} - {} {} ({})'.format(email, member.preferred_name, member.last_name, member.id))
+        logging.info(
+            "Password reset requested for: {} - {} {} ({})".format(
+                email, member.preferred_name, member.last_name, member.id
+            )
+        )
         super().save()
+
 
 class MyPasswordResetConfirmSerializer(PasswordResetConfirmSerializer):
     def save(self):
-        request_id = self.data['token'][-10:]
+        request_id = self.data["token"][-10:]
 
         data = dict(
             username=self.user.username,
-            password1=self.data['new_password1'],
+            password1=self.data["new_password1"],
         )
 
         if utils_ldap.is_configured():
-            if request_id: utils_stats.set_progress(request_id, 'Changing LDAP password...')
+            if request_id:
+                utils_stats.set_progress(request_id, "Changing LDAP password...")
             if utils_ldap.set_password(data) != 200:
-                msg = 'Problem connecting to LDAP server: set.'
+                msg = "Problem connecting to LDAP server: set."
                 utils.alert_tanner(msg)
                 logger.info(msg)
                 raise ValidationError(dict(non_field_errors=msg))
 
         data = dict(
             username=self.user.username,
-            password=self.data['new_password1'],
+            password=self.data["new_password1"],
             email=self.user.email,
             first_name=self.user.member.preferred_name,
         )
 
-        data['username'] = self.user.member.mediawiki_username or self.user.username
+        data["username"] = self.user.member.mediawiki_username or self.user.username
 
         if utils_auth.wiki_is_configured():
-            if request_id: utils_stats.set_progress(request_id, 'Changing Wiki password...')
+            if request_id:
+                utils_stats.set_progress(request_id, "Changing Wiki password...")
             if utils_auth.set_wiki_password(data) != 200:
-                msg = 'Problem connecting to Wiki Auth server: set.'
+                msg = "Problem connecting to Wiki Auth server: set."
                 utils.alert_tanner(msg)
                 logger.info(msg)
                 raise ValidationError(dict(non_field_errors=msg))
 
-        data['username'] = self.user.member.discourse_username or self.user.username
+        data["username"] = self.user.member.discourse_username or self.user.username
 
         if utils_auth.discourse_is_configured():
-            if request_id: utils_stats.set_progress(request_id, 'Changing Discourse password...')
+            if request_id:
+                utils_stats.set_progress(request_id, "Changing Discourse password...")
             if utils_auth.set_discourse_password(data) != 200:
-                msg = 'Problem connecting to Discourse Auth server: set.'
+                msg = "Problem connecting to Discourse Auth server: set."
                 utils.alert_tanner(msg)
                 logger.info(msg)
                 raise ValidationError(dict(non_field_errors=msg))
@@ -1124,9 +1266,16 @@ class MyPasswordResetConfirmSerializer(PasswordResetConfirmSerializer):
                 self.user.member.save()
 
         member = self.user.member
-        logging.info('Password reset completed for: {} {} ({})'.format(member.preferred_name, member.last_name, member.id))
+        logging.info(
+            "Password reset completed for: {} {} ({})".format(
+                member.preferred_name, member.last_name, member.id
+            )
+        )
 
-        if request_id: utils_stats.set_progress(request_id, 'Success! You can now log in as: ' + self.user.username)
+        if request_id:
+            utils_stats.set_progress(
+                request_id, "Success! You can now log in as: " + self.user.username
+            )
 
         time.sleep(1)
 
@@ -1136,28 +1285,31 @@ class MyPasswordResetConfirmSerializer(PasswordResetConfirmSerializer):
 class MemberCountSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.StatsMemberCount
-        fields = '__all__'
+        fields = "__all__"
+
 
 class SignupCountSerializer(serializers.ModelSerializer):
     month = serializers.SerializerMethodField()
 
     class Meta:
         model = models.StatsSignupCount
-        fields = '__all__'
+        fields = "__all__"
 
     def get_month(self, obj):
         return str(obj.month)[:7]
 
+
 class SpaceActivitySerializer(serializers.ModelSerializer):
     class Meta:
         model = models.StatsSpaceActivity
-        fields = '__all__'
+        fields = "__all__"
 
 
 class HistoryChangeSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.HistoryChange
-        fields = ['field', 'old', 'new']
+        fields = ["field", "old", "new"]
+
 
 class HistorySerializer(serializers.ModelSerializer):
     changes = HistoryChangeSerializer(many=True)
@@ -1165,25 +1317,28 @@ class HistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.HistoryIndex
-        fields = '__all__'
+        fields = "__all__"
+
 
 class SpaceportAuthSerializer(LoginSerializer):
     def authenticate(self, **kwargs):
         user = super().authenticate(**kwargs)
 
         if user:
-            data = self.context['request'].data.copy()
-            data['email'] = user.email
-            data['first_name'] = user.member.preferred_name
+            data = self.context["request"].data.copy()
+            data["email"] = user.email
+            data["first_name"] = user.member.preferred_name
 
-            data['username'] = user.member.mediawiki_username or user.username
+            data["username"] = user.member.mediawiki_username or user.username
             utils_auth.set_wiki_password(data)
 
-            data['username'] = user.member.discourse_username or user.username
+            data["username"] = user.member.discourse_username or user.username
             utils_auth.set_discourse_password(data)
 
             if not user.member.paused_date:
-                utils_auth.add_discourse_group_members('protospace_members', [data['username']])
+                utils_auth.add_discourse_group_members(
+                    "protospace_members", [data["username"]]
+                )
 
             if not user.member.discourse_username:
                 user.member.discourse_username = user.username
@@ -1191,39 +1346,64 @@ class SpaceportAuthSerializer(LoginSerializer):
 
         return user
 
+
 class MyLoginSerializer(LoginSerializer):
     def authenticate(self, **kwargs):
-        username = kwargs.get('username', '')
+        username = kwargs.get("username", "")
 
-        if 'your' in username and 'own' in username and 'name' in username:
-            raise ValidationError(dict(username='*server explodes*'))
+        if "your" in username and "own" in username and "name" in username:
+            raise ValidationError(dict(username="*server explodes*"))
 
-        if '.' not in username:
-            raise ValidationError(dict(username='Username should have a period. Try "first.last" or "first.middle.last".'))
+        if "." not in username:
+            raise ValidationError(
+                dict(
+                    username='Username should have a period. Try "first.last" or "first.middle.last".'
+                )
+            )
 
-        if '-' in username:
-            raise ValidationError(dict(username='Username shouldn\'t have dashes. Try "first.last" or "first.last.name".'))
+        if "-" in username:
+            raise ValidationError(
+                dict(
+                    username='Username shouldn\'t have dashes. Try "first.last" or "first.last.name".'
+                )
+            )
 
-        if ' ' in username:
-            raise ValidationError(dict(username='Username shouldn\'t have spaces. Try "first.last" or "first.middle.last".'))
+        if " " in username:
+            raise ValidationError(
+                dict(
+                    username='Username shouldn\'t have spaces. Try "first.last" or "first.middle.last".'
+                )
+            )
 
-        if 'first.last' in username:
-            raise ValidationError(dict(username='Don\'t literally try "first.last", use your own name.'))
+        if "first.last" in username:
+            raise ValidationError(
+                dict(username='Don\'t literally try "first.last", use your own name.')
+            )
 
-        if 'first.middle.last' in username:
-            raise ValidationError(dict(username='Don\'t literally try "first.middle.last", use your own name.'))
+        if "first.middle.last" in username:
+            raise ValidationError(
+                dict(
+                    username='Don\'t literally try "first.middle.last", use your own name.'
+                )
+            )
 
         if not User.objects.filter(username=username).exists():
-            raise ValidationError(dict(username='Username not found. Try "first.last" or "first.middle.last".'))
+            raise ValidationError(
+                dict(
+                    username='Username not found. Try "first.last" or "first.middle.last".'
+                )
+            )
 
         try:
             _ = User.objects.get(username=username).member
         except User.member.RelatedObjectDoesNotExist:
-            raise ValidationError(dict(username='Can\'t log in as superuser. Make an account below.'))
+            raise ValidationError(
+                dict(username="Can't log in as superuser. Make an account below.")
+            )
 
         user = super().authenticate(**kwargs)
 
         if not user:
-            raise ValidationError(dict(password='Incorrect password. Check caps lock.'))
+            raise ValidationError(dict(password="Incorrect password. Check caps lock."))
 
         return user

@@ -2,7 +2,7 @@ from django.apps import AppConfig
 
 
 class ApiConfig(AppConfig):
-    name = 'apiserver.api'
+    name = "apiserver.api"
 
     def ready(self):
         pass

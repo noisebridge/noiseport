@@ -7,7 +7,8 @@
 
 import django
 import os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'apiserver.settings'
+
+os.environ["DJANGO_SETTINGS_MODULE"] = "apiserver.settings"
 django.setup()
 
 from apiserver.api import models, utils_ldap
@@ -21,15 +22,15 @@ for member in members:
     print()
 
     username = member.user.username
-    print('Checking LDAP for member id:', member.id, 'username:', username)
+    print("Checking LDAP for member id:", member.id, "username:", username)
 
     if utils_ldap.is_configured():
         result = utils_ldap.find_user(member.user.username)
         if result == 200:
-            print('    username found, skipping')
+            print("    username found, skipping")
             continue
 
-        print('    generating LDAP user...')
+        print("    generating LDAP user...")
 
         data = dict(
             first_name=member.first_name,
@@ -40,4 +41,4 @@ for member in members:
         )
         result = utils_ldap.create_user(data)
 
-        print('    result:', result)
+        print("    result:", result)
