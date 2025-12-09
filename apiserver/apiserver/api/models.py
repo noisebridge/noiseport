@@ -6,6 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from zoneinfo import ZoneInfo
 from simple_history.models import HistoricalRecords
 from simple_history import register
+from decimal import Decimal
 
 TIMEZONE_CALGARY = ZoneInfo("America/Edmonton")
 

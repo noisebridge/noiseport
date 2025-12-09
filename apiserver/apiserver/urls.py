@@ -87,7 +87,7 @@ if secrets.ADMIN_RANDOM:
     ADMIN_ROUTE = "{}/admin/".format(secrets.ADMIN_RANDOM)
 else:
     ADMIN_ROUTE = "admin/"
-urlpatterns.append(path(ADMIN_ROUTE, admin.site.url))
+urlpatterns.append(path(ADMIN_ROUTE, admin.site.urls))
 
 if settings.DEBUG:
     urlpatterns += [

@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
@@ -861,7 +862,7 @@ class SessionSerializer(serializers.ModelSerializer):
     students = TrainingSerializer(many=True, read_only=True)
     max_students = serializers.IntegerField(min_value=1, max_value=50, allow_null=True)
     cost = serializers.DecimalField(
-        max_digits=None, decimal_places=2, min_value=0, max_value=200
+        max_digits=None, decimal_places=2, min_value=Decimal(0), max_value=Decimal(200)
     )
 
     class Meta:

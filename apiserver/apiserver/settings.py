@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 
 import os
 import logging.config
+import warnings
+
 
 logger = logging.getLogger(__name__)
 
@@ -188,6 +190,10 @@ USE_L10N = True
 USE_TZ = True
 
 
+# Fix for Django 3.2+ warnings about primary keys
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
@@ -271,10 +277,20 @@ LOGGING = {
 logging.config.dictConfig(LOGGING)
 
 SITE_ID = 1
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_EMAIL_VERIFICATION = "none"
-ACCOUNT_USERNAME_MIN_LENGTH = 3
-ACCOUNT_AUTHENTICATION_METHOD = "username"
+# Updated deprecated settings for Django-allauth
+SIGNUP_FIELDS = {
+    "username": {
+        "required": True,
+    },
+    "email": {
+        "required": True,
+    },
+}
+ACCOUNT_LOGIN_METHODS = {
+    "username",
+    "email",
+}
+# Updated to include email as login method
 OLD_PASSWORD_FIELD_ENABLED = True
 LOGOUT_ON_PASSWORD_CHANGE = False
 ACCOUNT_PRESERVE_USERNAME_CASING = False
