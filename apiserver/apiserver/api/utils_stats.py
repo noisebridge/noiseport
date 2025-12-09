@@ -3,7 +3,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 import time
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 import requests
 from django.db.models import Prefetch, Count, Q
 from django.core.cache import cache

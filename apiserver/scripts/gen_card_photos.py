@@ -1,6 +1,7 @@
 # Generates card photos for existing members with photos
 
-import django, sys, os
+import django
+import os
 os.environ['DJANGO_SETTINGS_MODULE'] = 'apiserver.settings'
 django.setup()
 

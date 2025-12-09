@@ -103,7 +103,7 @@ def create_tool_page(form_data, username=None):
             photo_data = form_data['photo']
             photo_extn = photo_data.content_type.replace('image/', '')
             photo_name = f'{tool_id}.{photo_extn}'
-            site.upload(photo_data, photo_name, 1, f'Photo of tool {tool_id}', comment=f'Uploaded tool picture' + credit)
+            site.upload(photo_data, photo_name, 1, f'Photo of tool {tool_id}', comment='Uploaded tool picture' + credit)
             rollbacks.append((site.pages[f'File:{photo_name}'].delete, {}))
             logger.info('Uploaded photo: %s', photo_name)
 

@@ -1,14 +1,13 @@
 import zoneinfo
-import django, sys, os
+import django
+import os
 
 os.environ["DJANGO_SETTINGS_MODULE"] = "apiserver.settings"
 django.setup()
 
 from datetime import datetime
-import json
-import zoneinfo
 
-from apiserver.api import models, utils
+from apiserver.api import models
 
 tz = zoneinfo.ZoneInfo("America/Edmonton")
 

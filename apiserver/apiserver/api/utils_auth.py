@@ -5,7 +5,6 @@ import requests
 from requests.exceptions import Timeout
 
 from apiserver import secrets
-from apiserver.api import utils
 
 def wiki_is_configured():
     return bool(secrets.WIKI_AUTH_API_URL and secrets.AUTH_API_KEY)

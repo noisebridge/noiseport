@@ -2,9 +2,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 import os
-import smtplib
 import time
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.core.mail import send_mail, EmailMultiAlternatives
 

@@ -5,13 +5,13 @@
 # Assigns a random password to the user.
 
 
-import django, sys, os
+import django
+import os
 os.environ['DJANGO_SETTINGS_MODULE'] = 'apiserver.settings'
 django.setup()
 
-from apiserver.api import models, utils, utils_ldap
+from apiserver.api import models, utils_ldap
 from uuid import uuid4
-import re
 
 random_password = lambda: str(uuid4())[:23]
 

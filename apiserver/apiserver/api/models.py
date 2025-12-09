@@ -3,7 +3,6 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.utils.timezone import now
 from zoneinfo import ZoneInfo
 from simple_history.models import HistoricalRecords
 from simple_history import register

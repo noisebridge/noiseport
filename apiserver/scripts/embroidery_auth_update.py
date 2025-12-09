@@ -1,12 +1,11 @@
-import django, sys, os
+import django
+import os
 
 os.environ["DJANGO_SETTINGS_MODULE"] = "apiserver.settings"
 django.setup()
 
 import datetime
-import json
-from django.utils.timezone import now
-from apiserver.api import models, utils
+from apiserver.api import models
 import zoneinfo
 
 

@@ -1,10 +1,11 @@
-import django, sys, os
+import django
+import os
 os.environ['DJANGO_SETTINGS_MODULE'] = 'apiserver.settings'
 django.setup()
 
 from django.contrib.auth.models import User
 
-from apiserver.api import models, utils
+from apiserver.api import models
 from uuid import uuid4
 import re
 

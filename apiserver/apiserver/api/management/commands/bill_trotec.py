@@ -1,13 +1,10 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from django.db.models import Max, F, Count, Q, Sum
+from django.db.models import Sum
 from django.utils.timezone import now
-from django.core.cache import cache
-from django.db import transaction
 from dateutil import relativedelta
 import math
 
-from apiserver import secrets, settings
 from apiserver.api import models, utils, utils_email
 
 import time

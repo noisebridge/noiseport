@@ -1,18 +1,19 @@
 import logging
 logger = logging.getLogger(__name__)
 
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
-from django.db.models import Max, F, Count, Q, Sum
+from django.db.models import Sum
 from django.utils.timezone import now
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator
 from rest_auth.registration.serializers import RegisterSerializer
 from rest_auth.serializers import PasswordChangeSerializer, PasswordResetSerializer, PasswordResetConfirmSerializer, LoginSerializer
-from rest_auth.serializers import UserDetailsSerializer
 import re
-import datetime, time, calendar
+import datetime
+import time
+import calendar
 
 from . import models, fields, utils, utils_ldap, utils_auth, utils_stats
 from .. import settings, secrets

@@ -1,7 +1,8 @@
 # will not work after expired date change
 # =======================================
 
-import django, sys, os
+import django
+import os
 os.environ['DJANGO_SETTINGS_MODULE'] = 'apiserver.settings'
 django.setup()
 

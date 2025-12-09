@@ -1,7 +1,7 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.utils.timezone import now
-from apiserver.api import models, utils, utils_stats, utils_email
-from datetime import datetime, timedelta
+from apiserver.api import models, utils, utils_stats
+from datetime import timedelta
 
 import time
 

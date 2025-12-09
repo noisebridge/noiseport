@@ -1,7 +1,8 @@
 # Expects a old_counts.csv of the historical counts in format:
 # date,member_count,green_count
 
-import django, sys, os
+import django
+import os
 os.environ['DJANGO_SETTINGS_MODULE'] = 'apiserver.settings'
 django.setup()
 

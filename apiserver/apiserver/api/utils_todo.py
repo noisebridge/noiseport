@@ -2,12 +2,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 import requests
-import json
 
 #breakpoint()
 
 if __name__ == '__main__':
-    import os, logging
+    import os
+    import logging
     DEBUG = os.environ.get('DEBUG')
     logging.basicConfig(
             format='[%(asctime)s] %(levelname)s %(module)s/%(funcName)s - %(message)s',

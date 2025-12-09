@@ -2,7 +2,6 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from apiserver.api.models import Member, User
-import json
 from parameterized import parameterized
 
 data = {
@@ -49,7 +48,7 @@ class RegistrationTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @parameterized.expand([(f"{key} is missing", key, status.HTTP_400_BAD_REQUEST) for key in data.keys() if key is not 'request_id'])
+    @parameterized.expand([(f"{key} is missing", key, status.HTTP_400_BAD_REQUEST) for key in data.keys() if key != 'request_id'])
     def test_malformed_data(self, name, inp, expected):
         """Delete specific properties from data and confirm it is not accepted by API"""
         copy = self.data.copy()

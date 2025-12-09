@@ -1,8 +1,9 @@
-import django, sys, os
+import django
+import os
 os.environ['DJANGO_SETTINGS_MODULE'] = 'apiserver.settings'
 django.setup()
 
-from django.db.models import Prefetch, Sum
+from django.db.models import Prefetch
 from apiserver.api import models, utils
 
 today = utils.today_alberta_tz()

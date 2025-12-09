@@ -1,7 +1,8 @@
 # Expects a scans.csv of the historical scans in format:
 # date,card_number
 
-import django, sys, os
+import django
+import os
 
 os.environ["DJANGO_SETTINGS_MODULE"] = "apiserver.settings"
 django.setup()
@@ -9,7 +10,6 @@ django.setup()
 import csv
 from datetime import datetime, timedelta
 from apiserver.api import models
-from django.utils.timezone import now
 import zoneinfo
 
 tz = zoneinfo.ZoneInfo(key="America/Edmonton")

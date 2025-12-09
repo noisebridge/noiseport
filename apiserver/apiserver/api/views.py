@@ -1,18 +1,17 @@
 import logging
 logger = logging.getLogger(__name__)
 
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, redirect
 from django.db import transaction
-from django.db.models import Max, F, Count, Q, Sum
+from django.db.models import Max, Count, Q, Sum
 from django.db.utils import OperationalError
 from django.http import HttpResponse, Http404, FileResponse, HttpResponseServerError
-from django.core.files.base import File
 from django.core.cache import cache
 from django.utils.timezone import now
-from rest_framework import viewsets, views, mixins, generics, exceptions, status as drfstatus
+from rest_framework import viewsets, views, mixins, exceptions, status as drfstatus
 from rest_framework.decorators import action, api_view
-from rest_framework.permissions import BasePermission, IsAuthenticated, SAFE_METHODS, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_auth.views import PasswordChangeView, PasswordResetView, PasswordResetConfirmView, LoginView
 from rest_auth.registration.views import RegisterView
@@ -21,10 +20,9 @@ from fuzzywuzzy import fuzz, process
 from collections import OrderedDict
 from dateutil import relativedelta
 import icalendar
-import datetime, time
-import io
+import datetime
+import time
 import csv
-import xmltodict
 import json
 
 from . import models, serializers, utils, utils_paypal, utils_stats, utils_ldap, utils_email, utils_mediawiki, utils_todo
