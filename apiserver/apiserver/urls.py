@@ -3,7 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework import routers
-from rest_auth.views import LogoutView
+from dj_rest_auth.views import LoginView, LogoutView
 
 from .api import views
 from . import secrets, settings
@@ -39,15 +39,15 @@ router.register(
 # router.register(r'me', views.FullMemberView, basename='fullmember')
 # router.register(r'registration', views.RegistrationViewSet, basename='register')
 
-url_patterns = [
+urlpatterns = [
     path("", include(router.urls)),
-    re_path(r"^rest-auth/login/$", views.MyLoginView.as_view(), name="rest_login"),
+    re_path(r"^dj-rest-auth/login/$", views.MyLoginView.as_view(), name="rest_login"),
     re_path(
         r"^spaceport-auth/login/$",
         views.SpaceportAuthView.as_view(),
         name="spaceport_auth",
     ),
-    re_path(r"^rest-auth/logout/$", LogoutView.as_view(), name="rest_logout"),
+    re_path(r"^dj-rest-auth/logout/$", LogoutView.as_view(), name="rest_logout"),
     re_path(
         r"^password/reset/$",
         views.PasswordResetView.as_view(),
@@ -81,15 +81,15 @@ url_patterns = [
 
 if secrets.IPN_RANDOM:
     IPN_ROUTE = r"^ipn/{}/".format(secrets.IPN_RANDOM)
-    url_patterns.append(re_path(IPN_ROUTE, views.IpnView.as_view(), name="ipn"))
+    urlpatterns.append(re_path(IPN_ROUTE, views.IpnView.as_view(), name="ipn"))
 
 if secrets.ADMIN_RANDOM:
     ADMIN_ROUTE = "{}/admin/".format(secrets.ADMIN_RANDOM)
 else:
     ADMIN_ROUTE = "admin/"
-url_patterns.append(path(ADMIN_ROUTE, admin.site.url))
+urlpatterns.append(path(ADMIN_ROUTE, admin.site.url))
 
 if settings.DEBUG:
-    url_patterns += [
+    urlpatterns += [
         path("api-auth/", include("rest_framework.urls")),
     ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

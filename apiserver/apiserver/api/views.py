@@ -14,13 +14,13 @@ from rest_framework import viewsets, views, mixins, exceptions, status as drfsta
 from rest_framework.decorators import action, api_view
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
-from rest_auth.views import (
+from dj_rest_auth.views import (
     PasswordChangeView,
     PasswordResetView,
     PasswordResetConfirmView,
     LoginView,
 )
-from rest_auth.registration.views import RegisterView
+from dj_rest_auth.registration.views import RegisterView
 from oidc_provider.views import AuthorizeView
 from fuzzywuzzy import fuzz, process
 from collections import OrderedDict

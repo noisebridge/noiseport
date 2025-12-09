@@ -77,11 +77,10 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "apiserver.api",
     "oidc_provider",
-    "rest_auth",
+    "dj_rest_auth",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",  # to support user deletion
-    "rest_auth.registration",
     "simple_history",
 ]
 

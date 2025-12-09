@@ -23,7 +23,7 @@ import paho.mqtt.publish as publish
 from django.db.models import Sum
 from django.core.cache import cache
 from zoneinfo import ZoneInfo
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from oidc_provider.lib.claims import ScopeClaims
 
 from . import (
