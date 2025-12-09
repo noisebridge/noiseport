@@ -3,23 +3,32 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.utils.timezone import now, pytz
+from django.utils.timezone import now
+from zoneinfo import ZoneInfo
 from simple_history.models import HistoricalRecords
 from simple_history import register
 
-TIMEZONE_CALGARY = pytz.timezone('America/Edmonton')
+TIMEZONE_CALGARY = ZoneInfo("America/Edmonton")
 
 register(User)
 
-IGNORE = '+'
+IGNORE = "+"
+
 
 def today_alberta_tz():
     return datetime.now(TIMEZONE_CALGARY).date()
 
+
 class Member(models.Model):
-    user = models.OneToOneField(User, related_name='member', blank=True, null=True, on_delete=models.SET_NULL)
-    signup_helper = models.ForeignKey(User, related_name='signed_up', blank=True, null=True, on_delete=models.SET_NULL)
-    sponsorship = models.ManyToManyField('self', related_name='sponsored_by', symmetrical=False, blank=True)
+    user = models.OneToOneField(
+        User, related_name="member", blank=True, null=True, on_delete=models.SET_NULL
+    )
+    signup_helper = models.ForeignKey(
+        User, related_name="signed_up", blank=True, null=True, on_delete=models.SET_NULL
+    )
+    sponsorship = models.ManyToManyField(
+        "self", related_name="sponsored_by", symmetrical=False, blank=True
+    )
     old_email = models.CharField(max_length=254, blank=True, null=True)
     photo_large = models.CharField(max_length=64, blank=True, null=True)
     photo_medium = models.CharField(max_length=64, blank=True, null=True)
@@ -30,9 +39,9 @@ class Member(models.Model):
     first_name = models.CharField(max_length=32)
     last_name = models.CharField(max_length=32)
     preferred_name = models.CharField(max_length=32)
-    phone = models.CharField(default='', max_length=32, null=True)
-    emergency_contact_name = models.CharField(default='', max_length=64, blank=True)
-    emergency_contact_phone = models.CharField(default='', max_length=32, blank=True)
+    phone = models.CharField(default="", max_length=32, null=True)
+    emergency_contact_name = models.CharField(default="", max_length=64, blank=True)
+    emergency_contact_phone = models.CharField(default="", max_length=32, blank=True)
     birthdate = models.DateField(blank=True, null=True)
     is_minor = models.BooleanField(default=False)
     guardian_name = models.CharField(max_length=32, blank=True, null=True)
@@ -61,20 +70,34 @@ class Member(models.Model):
     paused_date = models.DateField(blank=True, null=True)
     monthly_fees = models.IntegerField(default=55, blank=True, null=True)
     is_allowed_entry = models.BooleanField(default=True)
-    discourse_username = models.CharField(default='', max_length=40, blank=True, null=True)
-    mediawiki_username = models.CharField(default='', max_length=40, blank=True, null=True)
+    discourse_username = models.CharField(
+        default="", max_length=40, blank=True, null=True
+    )
+    mediawiki_username = models.CharField(
+        default="", max_length=40, blank=True, null=True
+    )
     allow_last_scanned = models.BooleanField(default=True)
 
-    history = HistoricalRecords(excluded_fields=['member_forms'])
+    history = HistoricalRecords(excluded_fields=["member_forms"])
 
-    list_display = ['user', 'preferred_name', 'last_name', 'status']
-    search_fields = ['user__username', 'preferred_name', 'last_name', 'status']
+    list_display = ["user", "preferred_name", "last_name", "status"]
+    search_fields = ["user__username", "preferred_name", "last_name", "status"]
+
     def __str__(self):
-        return getattr(self.user, 'username', 'None')
+        return getattr(self.user, "username", "None")
+
 
 class Transaction(models.Model):
-    user = models.ForeignKey(User, related_name='transactions', blank=True, null=True, on_delete=models.SET_NULL)
-    recorder = models.ForeignKey(User, related_name=IGNORE, blank=True, null=True, on_delete=models.SET_NULL)
+    user = models.ForeignKey(
+        User,
+        related_name="transactions",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+    )
+    recorder = models.ForeignKey(
+        User, related_name=IGNORE, blank=True, null=True, on_delete=models.SET_NULL
+    )
 
     member_id = models.IntegerField(blank=True, null=True)
     date = models.DateField(default=today_alberta_tz)
@@ -97,23 +120,33 @@ class Transaction(models.Model):
 
     history = HistoricalRecords()
 
-    list_display = ['date', 'user', 'amount', 'protocoin', 'account_type', 'category']
-    search_fields = ['date', 'user__username', 'account_type', 'category']
+    list_display = ["date", "user", "amount", "protocoin", "account_type", "category"]
+    search_fields = ["date", "user__username", "account_type", "category"]
+
     def __str__(self):
-        return '%s tx %s' % (user.username, date)
+        return "%s tx %s" % (user.username, date)
+
 
 class PayPalHint(models.Model):
-    user = models.ForeignKey(User, related_name='paypal_hints', blank=True, null=True, on_delete=models.SET_NULL)
+    user = models.ForeignKey(
+        User,
+        related_name="paypal_hints",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+    )
 
     account = models.CharField(unique=True, max_length=32)
     member_id = models.IntegerField(null=True)
 
     history = HistoricalRecords()
 
-    list_display = ['account', 'user']
-    search_fields = ['account', 'user__username']
+    list_display = ["account", "user"]
+    search_fields = ["account", "user__username"]
+
     def __str__(self):
         return self.account
+
 
 class IPN(models.Model):
     datetime = models.DateTimeField(auto_now_add=True)
@@ -122,13 +155,17 @@ class IPN(models.Model):
 
     history = HistoricalRecords()
 
-    list_display = ['datetime', 'status']
-    search_fields = ['datetime', 'status']
+    list_display = ["datetime", "status"]
+    search_fields = ["datetime", "status"]
+
     def __str__(self):
         return self.datetime
 
+
 class Card(models.Model):
-    user = models.ForeignKey(User, related_name='cards', blank=True, null=True, on_delete=models.SET_NULL)
+    user = models.ForeignKey(
+        User, related_name="cards", blank=True, null=True, on_delete=models.SET_NULL
+    )
 
     member_id = models.IntegerField(blank=True, null=True)
     card_number = models.CharField(unique=True, max_length=16, blank=True, null=True)
@@ -137,12 +174,14 @@ class Card(models.Model):
     last_seen = models.DateTimeField(blank=True, null=True)
     active_status = models.CharField(max_length=32, blank=True, null=True)
 
-    history = HistoricalRecords(excluded_fields=['last_seen_at', 'last_seen'])
+    history = HistoricalRecords(excluded_fields=["last_seen_at", "last_seen"])
 
-    list_display = ['card_number', 'user', 'last_seen']
-    search_fields = ['card_number', 'user__username', 'last_seen']
+    list_display = ["card_number", "user", "last_seen"]
+    search_fields = ["card_number", "user__username", "last_seen"]
+
     def __str__(self):
         return self.card_number
+
 
 class Course(models.Model):
     name = models.TextField(blank=True, null=True)
@@ -151,16 +190,26 @@ class Course(models.Model):
     tags = models.CharField(max_length=128, blank=True)
     num_interested = models.IntegerField(blank=True, null=True)  # cached / denormalized
 
-    history = HistoricalRecords(excluded_fields=['num_interested'])
+    history = HistoricalRecords(excluded_fields=["num_interested"])
 
-    list_display = ['name', 'id']
-    search_fields = ['name', 'id']
+    list_display = ["name", "id"]
+    search_fields = ["name", "id"]
+
     def __str__(self):
         return self.name
 
+
 class Session(models.Model):
-    instructor = models.ForeignKey(User, related_name='teaching', blank=True, null=True, on_delete=models.SET_NULL)
-    course = models.ForeignKey(Course, related_name='sessions', blank=True, null=True, on_delete=models.SET_NULL)
+    instructor = models.ForeignKey(
+        User, related_name="teaching", blank=True, null=True, on_delete=models.SET_NULL
+    )
+    course = models.ForeignKey(
+        Course,
+        related_name="sessions",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+    )
 
     is_cancelled = models.BooleanField(default=False)
     old_instructor = models.TextField(blank=True, null=True)
@@ -170,14 +219,27 @@ class Session(models.Model):
 
     history = HistoricalRecords()
 
-    list_display = ['datetime', 'course', 'instructor']
-    search_fields = ['datetime', 'course__name', 'instructor__username']
+    list_display = ["datetime", "course", "instructor"]
+    search_fields = ["datetime", "course__name", "instructor__username"]
+
     def __str__(self):
-        return '%s @ %s' % (self.course.name, self.datetime.astimezone(TIMEZONE_CALGARY).strftime('%Y-%m-%d %-I:%M %p'))
+        return "%s @ %s" % (
+            self.course.name,
+            self.datetime.astimezone(TIMEZONE_CALGARY).strftime("%Y-%m-%d %-I:%M %p"),
+        )
+
 
 class Training(models.Model):
-    user = models.ForeignKey(User, related_name='training', blank=True, null=True, on_delete=models.SET_NULL)
-    session = models.ForeignKey(Session, related_name='students', blank=True, null=True, on_delete=models.SET_NULL)
+    user = models.ForeignKey(
+        User, related_name="training", blank=True, null=True, on_delete=models.SET_NULL
+    )
+    session = models.ForeignKey(
+        Session,
+        related_name="students",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+    )
 
     member_id = models.IntegerField(blank=True, null=True)
     attendance_status = models.TextField(blank=True, null=True)
@@ -186,25 +248,39 @@ class Training(models.Model):
 
     history = HistoricalRecords()
 
-    list_display = ['session', 'user']
-    search_fields = ['session__course__name', 'user__username']
+    list_display = ["session", "user"]
+    search_fields = ["session__course__name", "user__username"]
+
     def __str__(self):
-        return '%s taking %s @ %s' % (self.user, self.session.course.name, self.session.datetime)
+        return "%s taking %s @ %s" % (
+            self.user,
+            self.session.course.name,
+            self.session.datetime,
+        )
+
 
 class Interest(models.Model):
-    user = models.ForeignKey(User, related_name='interests', null=True, on_delete=models.SET_NULL)
-    course = models.ForeignKey(Course, related_name='interests', null=True, on_delete=models.SET_NULL)
+    user = models.ForeignKey(
+        User, related_name="interests", null=True, on_delete=models.SET_NULL
+    )
+    course = models.ForeignKey(
+        Course, related_name="interests", null=True, on_delete=models.SET_NULL
+    )
 
-    satisfied_by = models.ForeignKey(Session, related_name='satisfies', null=True, on_delete=models.SET_NULL)
+    satisfied_by = models.ForeignKey(
+        Session, related_name="satisfies", null=True, on_delete=models.SET_NULL
+    )
 
-    list_display = ['user', 'course', 'satisfied_by']
-    search_fields = ['user__username', 'course__name']
+    list_display = ["user", "course", "satisfied_by"]
+    search_fields = ["user__username", "course__name"]
+
     def __str__(self):
-        return '%s interested in %s' % (self.user, self.course)
+        return "%s interested in %s" % (self.user, self.course)
 
 
 class MetaInfo(models.Model):
     backup_id = models.TextField()
+
 
 class StatsMemberCount(models.Model):
     date = models.DateField(default=today_alberta_tz)
@@ -214,8 +290,23 @@ class StatsMemberCount(models.Model):
     vetted_count = models.IntegerField()
     subscriber_count = models.IntegerField()
 
-    list_display = ['date', 'member_count', 'green_count', 'six_month_plus_count', 'vetted_count', 'subscriber_count']
-    search_fields = ['date', 'member_count', 'green_count', 'six_month_plus_count', 'vetted_count', 'subscriber_count']
+    list_display = [
+        "date",
+        "member_count",
+        "green_count",
+        "six_month_plus_count",
+        "vetted_count",
+        "subscriber_count",
+    ]
+    search_fields = [
+        "date",
+        "member_count",
+        "green_count",
+        "six_month_plus_count",
+        "vetted_count",
+        "subscriber_count",
+    ]
+
 
 class StatsSignupCount(models.Model):
     month = models.DateField()
@@ -223,20 +314,26 @@ class StatsSignupCount(models.Model):
     retain_count = models.IntegerField(default=0)
     vetted_count = models.IntegerField(default=0)
 
-    list_display = ['month', 'signup_count', 'retain_count', 'vetted_count']
-    search_fields = ['month', 'signup_count', 'retain_count', 'vetted_count']
+    list_display = ["month", "signup_count", "retain_count", "vetted_count"]
+    search_fields = ["month", "signup_count", "retain_count", "vetted_count"]
+
 
 class StatsSpaceActivity(models.Model):
     date = models.DateField(default=today_alberta_tz)
     card_scans = models.IntegerField()
 
-    list_display = ['date', 'card_scans']
-    search_fields = ['date', 'card_scans']
+    list_display = ["date", "card_scans"]
+    search_fields = ["date", "card_scans"]
+
 
 class Usage(models.Model):
-    user = models.ForeignKey(User, related_name='usages', blank=True, null=True, on_delete=models.SET_NULL)
+    user = models.ForeignKey(
+        User, related_name="usages", blank=True, null=True, on_delete=models.SET_NULL
+    )
 
-    username = models.CharField(max_length=64, blank=True)  # incase of LDAP-Spaceport mismatch
+    username = models.CharField(
+        max_length=64, blank=True
+    )  # incase of LDAP-Spaceport mismatch
 
     device = models.CharField(max_length=64)
     started_at = models.DateTimeField(auto_now_add=True)
@@ -248,15 +345,19 @@ class Usage(models.Model):
     memo = models.TextField(blank=True)
     should_bill = models.BooleanField(default=True)
 
-    history = HistoricalRecords(excluded_fields=['num_reports'])
+    history = HistoricalRecords(excluded_fields=["num_reports"])
 
-    list_display = ['started_at', 'finished_at', 'user', 'num_seconds', 'should_bill']
-    search_fields = ['started_at', 'finished_at', 'user__username']
+    list_display = ["started_at", "finished_at", "user", "num_seconds", "should_bill"]
+    search_fields = ["started_at", "finished_at", "user__username"]
+
     def __str__(self):
         return str(self.started_at)
 
+
 class PinballScore(models.Model):
-    user = models.ForeignKey(User, related_name='scores', blank=True, null=True, on_delete=models.SET_NULL)
+    user = models.ForeignKey(
+        User, related_name="scores", blank=True, null=True, on_delete=models.SET_NULL
+    )
 
     started_at = models.DateTimeField(auto_now_add=True)
     finished_at = models.DateTimeField(null=True)
@@ -267,13 +368,17 @@ class PinballScore(models.Model):
 
     # no history
 
-    list_display = ['started_at', 'game_id', 'player', 'score', 'user']
-    search_fields = ['started_at', 'game_id', 'player', 'score', 'user__username']
+    list_display = ["started_at", "game_id", "player", "score", "user"]
+    search_fields = ["started_at", "game_id", "player", "score", "user__username"]
+
     def __str__(self):
         return str(self.started_at)
 
+
 class Hosting(models.Model):
-    user = models.ForeignKey(User, related_name='hosting', blank=True, null=True, on_delete=models.SET_NULL)
+    user = models.ForeignKey(
+        User, related_name="hosting", blank=True, null=True, on_delete=models.SET_NULL
+    )
 
     started_at = models.DateTimeField(auto_now_add=True)
     finished_at = models.DateTimeField()
@@ -281,27 +386,34 @@ class Hosting(models.Model):
 
     # no history
 
-    list_display = ['started_at', 'hours', 'finished_at', 'user']
-    search_fields = ['started_at', 'hours', 'finished_at', 'user__username']
+    list_display = ["started_at", "hours", "finished_at", "user"]
+    search_fields = ["started_at", "hours", "finished_at", "user__username"]
+
     def __str__(self):
         return str(self.started_at)
 
+
 class StorageSpace(models.Model):
-    user = models.ForeignKey(User, related_name='storage', blank=True, null=True, on_delete=models.SET_NULL)
+    user = models.ForeignKey(
+        User, related_name="storage", blank=True, null=True, on_delete=models.SET_NULL
+    )
 
     shelf_id = models.TextField(unique=True)
-    location = models.TextField(choices=[
-        ('member_shelves', 'Member Shelves'),
-        ('lockers', 'Lockers'),
-        ('large_project_storage', 'Large Project Storage'),
-        ('accessible_project_storage', 'Accessible Project Storage'),
-    ])
+    location = models.TextField(
+        choices=[
+            ("member_shelves", "Member Shelves"),
+            ("lockers", "Lockers"),
+            ("large_project_storage", "Large Project Storage"),
+            ("accessible_project_storage", "Accessible Project Storage"),
+        ]
+    )
     memo = models.TextField(blank=True)
 
     history = HistoricalRecords()
 
-    list_display = ['shelf_id', 'location', 'user', 'id']
-    search_fields = ['shelf_id', 'location', 'user__username', 'id']
+    list_display = ["shelf_id", "location", "user", "id"]
+    search_fields = ["shelf_id", "location", "user__username", "id"]
+
     def __str__(self):
         return self.shelf_id
 
@@ -309,7 +421,7 @@ class StorageSpace(models.Model):
 class HistoryIndex(models.Model):
     content_type = models.ForeignKey(ContentType, null=True, on_delete=models.SET_NULL)
     object_id = models.PositiveIntegerField()
-    history = GenericForeignKey('content_type', 'object_id')
+    history = GenericForeignKey("content_type", "object_id")
 
     owner_id = models.PositiveIntegerField()
     owner_name = models.TextField()
@@ -322,19 +434,40 @@ class HistoryIndex(models.Model):
     is_system = models.BooleanField()
     is_admin = models.BooleanField()
 
-    list_display = ['history_date', 'history_user', 'history_type', 'owner_name', 'object_name']
-    search_fields = ['history_date', 'history_user__username', 'history_type', 'owner_name', 'object_name']
+    list_display = [
+        "history_date",
+        "history_user",
+        "history_type",
+        "owner_name",
+        "object_name",
+    ]
+    search_fields = [
+        "history_date",
+        "history_user__username",
+        "history_type",
+        "owner_name",
+        "object_name",
+    ]
+
     def __str__(self):
-        return '%s changed %s\'s %s' % (self.history_user, self.owner_name, self.object_name)
+        return "%s changed %s's %s" % (
+            self.history_user,
+            self.owner_name,
+            self.object_name,
+        )
+
 
 class HistoryChange(models.Model):
-    index = models.ForeignKey(HistoryIndex, related_name='changes', null=True, on_delete=models.SET_NULL)
+    index = models.ForeignKey(
+        HistoryIndex, related_name="changes", null=True, on_delete=models.SET_NULL
+    )
 
     field = models.TextField()
     old = models.TextField()
     new = models.TextField()
 
-    list_display = ['field', 'old', 'new', 'index']
-    search_fields = ['field', 'old', 'new', 'index__history_user__username']
+    list_display = ["field", "old", "new", "index"]
+    search_fields = ["field", "old", "new", "index__history_user__username"]
+
     def __str__(self):
         return self.field

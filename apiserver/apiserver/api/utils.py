@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(__name__)
 
 import io
@@ -11,6 +12,7 @@ from rest_framework.views import exception_handler
 from dateutil import relativedelta
 from uuid import uuid4
 from PIL import Image, ImageDraw, ImageFont, ImageOps, JpegImagePlugin
+
 JpegImagePlugin._getmp = lambda x: None
 from bleach.sanitizer import Cleaner
 from PyPDF2 import PdfFileWriter, PdfFileReader
@@ -20,130 +22,150 @@ import paho.mqtt.publish as publish
 
 from django.db.models import Sum
 from django.core.cache import cache
-from django.utils.timezone import now, pytz
+from django.utils.timezone import now
+from zoneinfo import ZoneInfo
 from django.utils.translation import ugettext_lazy as _
 from oidc_provider.lib.claims import ScopeClaims
 
-from . import models, serializers, utils_ldap, utils_stats, utils_auth, utils, utils_email
+from . import (
+    models,
+    serializers,
+    utils_ldap,
+    utils_stats,
+    utils_auth,
+    utils,
+    utils_email,
+)
 from .. import settings, secrets
 
-STATIC_FOLDER = 'data/static/'
+STATIC_FOLDER = "data/static/"
 
-TIMEZONE_CALGARY = pytz.timezone('America/Edmonton')
+TIMEZONE_CALGARY = ZoneInfo("America/Edmonton")
+
 
 def today_alberta_tz():
     return datetime.now(TIMEZONE_CALGARY).date()
 
+
 def now_alberta_tz():
     return datetime.now(TIMEZONE_CALGARY)
 
+
 def alert_tanner(message):
     try:
-        logger.info('Alerting Tanner: ' + message)
+        logger.info("Alerting Tanner: " + message)
         params = dict(spaceport=message)
-        requests.get('https://tbot.tannercollin.com/message', params=params, timeout=4)
+        requests.get("https://tbot.tannercollin.com/message", params=params, timeout=4)
     except BaseException as e:
-        logger.error('Problem alerting Tanner: ' + str(e))
+        logger.error("Problem alerting Tanner: " + str(e))
+
 
 def spaceporter_host(message):
-    logger.info('Spaceporter bot sending to host chat: ' + message)
+    logger.info("Spaceporter bot sending to host chat: " + message)
 
     if secrets.SPACEPORTER_HOST_TOKEN:
-        url = 'https://forum.protospace.ca/chat/hooks/{}.json'.format(
+        url = "https://forum.protospace.ca/chat/hooks/{}.json".format(
             secrets.SPACEPORTER_HOST_TOKEN,
         )
     else:
-        logger.info('Aborting Spaceporter bot message, no token.')
+        logger.info("Aborting Spaceporter bot message, no token.")
         return
 
     try:
         data = dict(text=message)
         requests.post(url, json=data, timeout=4)
     except BaseException as e:
-        logger.error('Problem with bot: ' + str(e))
+        logger.error("Problem with bot: " + str(e))
+
 
 def mqtt_publish(topic, message):
     if not secrets.MQTT_WRITER_PASSWORD:
         return False
 
     if settings.DEBUG:
-        topic = 'dev_' + topic
-        client_id='dev_spaceport'
+        topic = "dev_" + topic
+        client_id = "dev_spaceport"
     else:
-        client_id='spaceport'
+        client_id = "spaceport"
 
     try:
         publish.single(
             topic,
             message,
-            hostname='webhost.protospace.ca',
+            hostname="webhost.protospace.ca",
             port=8883,
             client_id=client_id,
-            auth=dict(username='writer', password=secrets.MQTT_WRITER_PASSWORD),
-            tls=dict(ca_certs='/etc/ssl/certs/ISRG_Root_X1.pem'),
+            auth=dict(username="writer", password=secrets.MQTT_WRITER_PASSWORD),
+            tls=dict(ca_certs="/etc/ssl/certs/ISRG_Root_X1.pem"),
             keepalive=5,  # timeout
         )
     except BaseException as e:
-        logger.error('Problem sending MQTT message: ' + str(e))
+        logger.error("Problem sending MQTT message: " + str(e))
 
 
 def num_months_spanned(d1, d2):
-    '''
+    """
     Return number of month thresholds two dates span.
     Order of arguments is same as subtraction
     ie. Feb 2, Jan 29 returns 1
-    '''
+    """
     return (d1.year - d2.year) * 12 + d1.month - d2.month
 
+
 def num_months_difference(d1, d2):
-    '''
+    """
     Return number of whole months between two dates.
     Order of arguments is same as subtraction
     ie. Feb 2, Jan 29 returns 0
-    '''
+    """
     r = relativedelta.relativedelta(d1, d2)
     return r.months + 12 * r.years
 
+
 def calc_member_status(expire_date, fake_date=None):
-    '''
+    """
     Return: member status
-    '''
+    """
     today = fake_date or today_alberta_tz()
 
     difference = num_months_difference(expire_date, today)
 
     if today + timedelta(days=29) < expire_date:
-        return 'Prepaid'
+        return "Prepaid"
     elif difference <= -3:
-        return 'Expired Member'
+        return "Expired Member"
     elif today - timedelta(days=29) >= expire_date:
-        return 'Overdue'
+        return "Overdue"
     elif today < expire_date:
-        return 'Current'
+        return "Current"
     elif today >= expire_date:
-        return 'Due'
+        return "Due"
     else:
-        raise()
+        raise ()
+
 
 def add_months(date, num_months):
     return date + relativedelta.relativedelta(months=num_months)
 
+
 def tally_membership_months(member, fake_date=None):
-    '''
+    """
     Sum together member's dues and calculate their new expire date and status
     Doesn't work if member is paused.
-    '''
-    if member.paused_date: return False
+    """
+    if member.paused_date:
+        return False
 
     start_date = member.current_start_date
-    if not start_date: return False
+    if not start_date:
+        return False
 
     txs = models.Transaction.objects.filter(
         user__member=member,
         date__gte=start_date,
     )
-    total_months_agg = txs.aggregate(Sum('number_of_membership_months'))
-    total_months = total_months_agg['number_of_membership_months__sum'] or 0
+    total_months_agg = txs.aggregate(Sum("number_of_membership_months"))
+    total_months = total_months_agg["number_of_membership_months__sum"] or 0
 
     expire_date = add_months(start_date, total_months)
     status = calc_member_status(expire_date, fake_date)
@@ -154,94 +176,103 @@ def tally_membership_months(member, fake_date=None):
         member.expire_date = expire_date
         member.status = status
 
-        if status == 'Expired Member':
+        if status == "Expired Member":
             member.paused_date = today_alberta_tz()
-            msg = 'Member has expired: {} {}'.format(member.preferred_name, member.last_name)
+            msg = "Member has expired: {} {}".format(
+                member.preferred_name, member.last_name
+            )
             alert_tanner(msg)
             logger.info(msg)
 
-        if status == 'Overdue':
-            if previous_status == 'Due':
-                msg = 'Member has become Overdue: {} {}'.format(member.preferred_name, member.last_name)
+        if status == "Overdue":
+            if previous_status == "Due":
+                msg = "Member has become Overdue: {} {}".format(
+                    member.preferred_name, member.last_name
+                )
                 alert_tanner(msg)
                 logger.info(msg)
 
                 utils_email.send_overdue_email(member)
             else:
-                logger.info('Skipping email because member wasn\'t due before.')
+                logger.info("Skipping email because member wasn't due before.")
 
         member.save()
-        logging.debug('Tallied %s membership months: updated.', member)
+        logging.debug("Tallied %s membership months: updated.", member)
     else:
-        logging.debug('Tallied %s membership months: no changes.', member)
+        logging.debug("Tallied %s membership months: no changes.", member)
 
     return True
 
 
 def gen_search_strings():
-    '''
+    """
     Generate a cache dict of names to member ids for rapid string matching
-    '''
+    """
     start = time.time()
 
     search_strings = {}
-    for m in models.Member.objects.order_by('-expire_date').prefetch_related('user__storage'):
-        string = '{} {} | {} {}'.format(
+    for m in models.Member.objects.order_by("-expire_date").prefetch_related(
+        "user__storage"
+    ):
+        string = "{} {} | {} {}".format(
             m.preferred_name,
             m.last_name,
             m.first_name,
             m.last_name,
         )
 
-        string += ' | ' + m.user.email
+        string += " | " + m.user.email
 
         if m.discourse_username:
-            string += ' | ' + m.discourse_username
+            string += " | " + m.discourse_username
 
-        string += ' | ' + str(m.id)
+        string += " | " + str(m.id)
 
         for s in m.user.storage.all():
-            string += ' | ' + s.shelf_id
+            string += " | " + s.shelf_id
 
         string = string.lower()
         search_strings[string] = m.id
 
-    cache.set('search_strings', search_strings)
+    cache.set("search_strings", search_strings)
 
-    logger.info('Generated search strings in %s s.', time.time() - start)
+    logger.info("Generated search strings in %s s.", time.time() - start)
 
 
 LARGE_SIZE = 1080
 MEDIUM_SIZE = 220
 SMALL_SIZE = 110
 
+
 def process_image_upload(upload, crop):
-    '''
+    """
     Save an image upload in small, medium, large sizes and return filenames
-    '''
+    """
     try:
         pic = Image.open(upload)
     except OSError:
-        raise serializers.ValidationError(dict(non_field_errors='Invalid image file.'))
+        raise serializers.ValidationError(dict(non_field_errors="Invalid image file."))
 
-    logging.info('Detected format: %s', pic.format)
+    logging.info("Detected format: %s", pic.format)
 
-    if pic.format == 'PNG':
-        ext = '.png'
-    elif pic.format == 'JPEG':
-        ext = '.jpg'
+    if pic.format == "PNG":
+        ext = ".png"
+    elif pic.format == "JPEG":
+        ext = ".jpg"
     else:
-        raise serializers.ValidationError(dict(non_field_errors='Image must be a jpg or png.'))
+        raise serializers.ValidationError(
+            dict(non_field_errors="Image must be a jpg or png.")
+        )
 
     pic = ImageOps.exif_transpose(pic)
 
     if crop:
         crop = json.loads(crop)
         pic_x, pic_y = pic.size
-        left = pic_x * crop['x']/100.0
-        top = pic_y * crop['y']/100.0
-        right = left + pic_x * crop['width']/100.0
-        bottom = top + pic_y * crop['height']/100.0
+        left = pic_x * crop["x"] / 100.0
+        top = pic_y * crop["y"] / 100.0
+        right = left + pic_x * crop["width"] / 100.0
+        bottom = top + pic_y * crop["height"] / 100.0
         pic = pic.crop((left, top, right, bottom))
 
     large = str(uuid4()) + ext
@@ -261,45 +292,49 @@ def process_image_upload(upload, crop):
 
 GARDEN_MEDIUM_SIZE = 500
 
+
 def process_garden_image(upload):
     try:
         pic = Image.open(upload)
     except OSError:
-        raise serializers.ValidationError(dict(non_field_errors='Invalid image file.'))
+        raise serializers.ValidationError(dict(non_field_errors="Invalid image file."))
 
-    logging.debug('Detected format: %s', pic.format)
+    logging.debug("Detected format: %s", pic.format)
 
-    if pic.format == 'PNG':
-        ext = '.png'
-    elif pic.format == 'JPEG':
-        ext = '.jpg'
+    if pic.format == "PNG":
+        ext = ".png"
+    elif pic.format == "JPEG":
+        ext = ".jpg"
     else:
-        raise serializers.ValidationError(dict(non_field_errors='Image must be a jpg or png.'))
+        raise serializers.ValidationError(
+            dict(non_field_errors="Image must be a jpg or png.")
+        )
 
     pic = ImageOps.exif_transpose(pic)
 
     draw = ImageDraw.Draw(pic)
 
-    timestamp = now_alberta_tz().strftime('%a %b %-d, %Y  %-I:%M %p')
+    timestamp = now_alberta_tz().strftime("%a %b %-d, %Y  %-I:%M %p")
 
-    font = ImageFont.truetype('DejaVuSans.ttf', 60)
-    draw.text((10, 10), timestamp, (0,0,0), font=font)
+    font = ImageFont.truetype("DejaVuSans.ttf", 60)
+    draw.text((10, 10), timestamp, (0, 0, 0), font=font)
 
-    large = 'garden-large' + ext
+    large = "garden-large" + ext
     pic.save(STATIC_FOLDER + large)
 
-    medium = 'garden-medium' + ext
+    medium = "garden-medium" + ext
     pic.thumbnail([GARDEN_MEDIUM_SIZE, GARDEN_MEDIUM_SIZE], Image.LANCZOS)
     pic.save(STATIC_FOLDER + medium)
 
     return medium, large
 
 
-CARD_TEMPLATE_FILE = 'misc/member_card_template.jpg'
+CARD_TEMPLATE_FILE = "misc/member_card_template.jpg"
 CARD_PHOTO_SIZE = 425
 CARD_PHOTO_MARGIN_TOP = 75
 CARD_PHOTO_MARGIN_SIDE = 30
 CARD_TEXT_SIZE_LIMIT = 550
+
 
 def gen_card_photo(member):
     card_template = Image.open(CARD_TEMPLATE_FILE)
@@ -317,44 +352,49 @@ def gen_card_photo(member):
 
     # check font size
     font_sizes = (60, 72)
-    font = ImageFont.truetype('DejaVuSans-Bold.ttf', font_sizes[1])
+    font = ImageFont.truetype("DejaVuSans-Bold.ttf", font_sizes[1])
     size = draw.textsize(str(member.last_name), font=font)
     if size[0] > CARD_TEXT_SIZE_LIMIT:
         font_sizes = (36, 48)
 
-    font = ImageFont.truetype('DejaVuSans.ttf', font_sizes[0])
+    font = ImageFont.truetype("DejaVuSans.ttf", font_sizes[0])
     x = CARD_PHOTO_MARGIN_SIDE
     y = my + CARD_PHOTO_MARGIN_TOP + CARD_PHOTO_MARGIN_SIDE
-    draw.text((x, y), str(member.preferred_name), (0,0,0), font=font)
+    draw.text((x, y), str(member.preferred_name), (0, 0, 0), font=font)
 
-    font = ImageFont.truetype('DejaVuSans-Bold.ttf', font_sizes[1])
+    font = ImageFont.truetype("DejaVuSans-Bold.ttf", font_sizes[1])
     y = my + CARD_PHOTO_MARGIN_TOP + CARD_PHOTO_MARGIN_SIDE + font_sizes[1]
-    draw.text((x, y), str(member.last_name), (0,0,0), font=font)
+    draw.text((x, y), str(member.last_name), (0, 0, 0), font=font)
 
-    font = ImageFont.truetype('DejaVuSans.ttf', 36)
-    draw.text((x, 800), 'Joined: ' + str(member.application_date or 'Unknown'), (0,0,0), font=font)
+    font = ImageFont.truetype("DejaVuSans.ttf", 36)
+    draw.text(
+        (x, 800),
+        "Joined: " + str(member.application_date or "Unknown"),
+        (0, 0, 0),
+        font=font,
+    )
     y = CARD_PHOTO_MARGIN_SIDE
-    draw.text((475, y), str(member.id), (0,0,0), font=font)
+    draw.text((475, y), str(member.id), (0, 0, 0), font=font)
 
     bio = io.BytesIO()
-    card_template.save(bio, 'JPEG', quality=95)
+    card_template.save(bio, "JPEG", quality=95)
     bio.seek(0)
 
     return bio
 
 
 ALLOWED_TAGS = [
-    'h3',
-    'p',
-    'br',
-    'strong',
-    'em',
-    'u',
-    'code',
-    'ol',
-    'li',
-    'ul',
-    'a',
+    "h3",
+    "p",
+    "br",
+    "strong",
+    "em",
+    "u",
+    "code",
+    "ol",
+    "li",
+    "ul",
+    "a",
 ]
 
 clean = Cleaner(tags=ALLOWED_TAGS).clean
@@ -362,96 +402,110 @@ clean = Cleaner(tags=ALLOWED_TAGS).clean
 
 def is_request_from_protospace(request):
     # TODO: pull to config
-    whitelist = ['24.66.110.96', '205.233.15.76', '205.233.15.69', '70.75.142.145', '68.144.251.45']
+    whitelist = [
+        "24.66.110.96",
+        "205.233.15.76",
+        "205.233.15.69",
+        "70.75.142.145",
+        "68.144.251.45",
+    ]
 
     if settings.DEBUG:
         return True
 
     # set (not appended) directly by nginx so we can trust it
-    real_ip = request.META.get('HTTP_X_REAL_IP', False)
+    real_ip = request.META.get("HTTP_X_REAL_IP", False)
 
     return real_ip in whitelist
 
+
 def create_new_member(data, user):
     members = models.Member.objects
-    if members.filter(old_email__iexact=data['email']).exists():
-        msg = 'Account was found in old portal.'
+    if members.filter(old_email__iexact=data["email"]).exists():
+        msg = "Account was found in old portal."
         logger.info(msg)
         raise ValidationError(dict(email=msg))
 
     if utils_ldap.is_configured():
-        if data['request_id']: utils_stats.set_progress(data['request_id'], 'Creating LDAP account...')
+        if data["request_id"]:
+            utils_stats.set_progress(data["request_id"], "Creating LDAP account...")
         result = utils_ldap.find_user(user.username)
         if result == 200:
-            msg = 'Username was found in old portal.'
+            msg = "Username was found in old portal."
             logger.info(msg)
             raise ValidationError(dict(username=msg))
         elif result == 404:
             pass
         else:
-            msg = 'Problem connecting to LDAP server.'
+            msg = "Problem connecting to LDAP server."
             alert_tanner(msg)
             logger.info(msg)
             raise ValidationError(dict(non_field_errors=msg))
 
         if utils_ldap.create_user(data) != 200:
-            msg = 'Problem connecting to LDAP server: create.'
+            msg = "Problem connecting to LDAP server: create."
             alert_tanner(msg)
             logger.info(msg)
             raise ValidationError(dict(non_field_errors=msg))
 
-    if data['request_id']: utils_stats.set_progress(data['request_id'], 'Creating new member...')
+    if data["request_id"]:
+        utils_stats.set_progress(data["request_id"], "Creating new member...")
 
     models.Member.objects.create(
         user=user,
-        first_name=data['first_name'],
-        last_name=data['last_name'],
-        preferred_name=data['preferred_name'],
+        first_name=data["first_name"],
+        last_name=data["last_name"],
+        preferred_name=data["preferred_name"],
     )
+
 
 def register_user(data, user):
     data = data.copy()
-    data['first_name'] = data['first_name'].title().strip()
-    data['last_name'] = data['last_name'].title().strip()
-    data['preferred_name'] = data['preferred_name'].title().strip()
+    data["first_name"] = data["first_name"].title().strip()
+    data["last_name"] = data["last_name"].title().strip()
+    data["preferred_name"] = data["preferred_name"].title().strip()
 
     # Sometimes during demos, a user makes a fake account then then has to be cleaned out
     # Notify me that this has happened so I can go clean out the database
-    if 'test' in data['username']:
-        msg = 'Someone created a test account: {} {} {} {}'.format(
-            data['username'],
-            data['first_name'],
-            data['last_name'],
-            data['email'],
+    if "test" in data["username"]:
+        msg = "Someone created a test account: {} {} {} {}".format(
+            data["username"],
+            data["first_name"],
+            data["last_name"],
+            data["email"],
         )
         logger.info(msg)
         alert_tanner(msg)
 
     try:
-        logger.info('Creating new member...')
+        logger.info("Creating new member...")
         create_new_member(data, user)
     except:
         user.delete()
         raise
 
     auth_data = dict(
-        username=data['username'],
-        password=data['password1'],
-        email=data['email'],
-        first_name=data['preferred_name'],
+        username=data["username"],
+        password=data["password1"],
+        email=data["email"],
+        first_name=data["preferred_name"],
     )
 
     if utils_auth.wiki_is_configured():
-        if data['request_id']: utils_stats.set_progress(data['request_id'], 'Creating Wiki account...')
+        if data["request_id"]:
+            utils_stats.set_progress(data["request_id"], "Creating Wiki account...")
         if utils_auth.set_wiki_password(auth_data) != 200:
-            msg = 'Problem connecting to Wiki Auth server: set.'
+            msg = "Problem connecting to Wiki Auth server: set."
             utils.alert_tanner(msg)
             logger.info(msg)
 
     if utils_auth.discourse_is_configured():
-        if data['request_id']: utils_stats.set_progress(data['request_id'], 'Creating Discourse account...')
+        if data["request_id"]:
+            utils_stats.set_progress(
+                data["request_id"], "Creating Discourse account..."
+            )
         if utils_auth.set_discourse_password(auth_data) != 200:
-            msg = 'Problem connecting to Discourse Auth server: set.'
+            msg = "Problem connecting to Discourse Auth server: set."
             utils.alert_tanner(msg)
             logger.info(msg)
         if not user.member.discourse_username:
@@ -459,22 +513,29 @@ def register_user(data, user):
             user.member.save()
 
     if utils_auth.discourse_is_configured():
-        if data['request_id']: utils_stats.set_progress(data['request_id'], 'Adding to Discourse group...')
-        if utils_auth.add_discourse_group_members('protospace_members', [data['username']]) != 200:
-            msg = 'Problem connecting to Discourse Auth server: add.'
+        if data["request_id"]:
+            utils_stats.set_progress(data["request_id"], "Adding to Discourse group...")
+        if (
+            utils_auth.add_discourse_group_members(
+                "protospace_members", [data["username"]]
+            )
+            != 200
+        ):
+            msg = "Problem connecting to Discourse Auth server: add."
             utils.alert_tanner(msg)
             logger.info(msg)
 
-    if data['request_id']: utils_stats.set_progress(data['request_id'], 'Sending welcome email...')
+    if data["request_id"]:
+        utils_stats.set_progress(data["request_id"], "Sending welcome email...")
     try:
         utils_email.send_welcome_email(user.member)
     except BaseException as e:
-        msg = 'Problem sending welcome email: ' + str(e)
+        msg = "Problem sending welcome email: " + str(e)
         logger.exception(msg)
         alert_tanner(msg)
 
     if user.id == 1:
-        logging.info('First user created, granting portal staff and vetting.')
+        logging.info("First user created, granting portal staff and vetting.")
         user.is_staff = True
         user.is_superuser = True
         user.save()
@@ -482,45 +543,51 @@ def register_user(data, user):
         user.member.vetted_date = today_alberta_tz()
         user.member.save()
 
-
-    if data['request_id']: utils_stats.set_progress(data['request_id'], 'Done!')
+    if data["request_id"]:
+        utils_stats.set_progress(data["request_id"], "Done!")
 
     gen_search_strings()
 
-    cache.set('sign', 'Welcome to Protospace, {}!'.format(data['preferred_name']))
-    cache.set('vestaboard', 'Welcome to Protospace, {}!'.format(data['preferred_name']))
+    cache.set("sign", "Welcome to Protospace, {}!".format(data["preferred_name"]))
+    cache.set("vestaboard", "Welcome to Protospace, {}!".format(data["preferred_name"]))
 
 
-BLANK_FORM = 'misc/blank_member_form.pdf'
+BLANK_FORM = "misc/blank_member_form.pdf"
+
+
 def gen_member_forms(member):
     serializer = serializers.MemberSerializer(member)
     data = serializer.data
 
     packet = io.BytesIO()
     can = canvas.Canvas(packet, pagesize=letter)
-    can.drawString(34, 683, data['first_name'])
-    can.drawString(218, 683, data['last_name'])
-    can.drawString(403, 683, data['preferred_name'])
-    can.drawString(34, 626, data['email'])
-    can.drawString(332, 626, data['phone'])
-    can.drawString(34, 570, data['emergency_contact_name'])
-    can.drawString(332, 570, data['emergency_contact_phone'])
+    can.drawString(34, 683, data["first_name"])
+    can.drawString(218, 683, data["last_name"])
+    can.drawString(403, 683, data["preferred_name"])
+    can.drawString(34, 626, data["email"])
+    can.drawString(332, 626, data["phone"])
+    can.drawString(34, 570, data["emergency_contact_name"])
+    can.drawString(332, 570, data["emergency_contact_phone"])
     can.save()
     packet.seek(0)
     info_pdf = PdfFileReader(packet)
 
     packet = io.BytesIO()
     can = canvas.Canvas(packet, pagesize=letter)
-    can.drawRightString(600, 770, '{} {} ({})'.format(
-        data['preferred_name'],
-        data['last_name'],
-        data['id'],
-    ))
+    can.drawRightString(
+        600,
+        770,
+        "{} {} ({})".format(
+            data["preferred_name"],
+            data["last_name"],
+            data["id"],
+        ),
+    )
     can.save()
     packet.seek(0)
     topright_pdf = PdfFileReader(packet)
 
-    existing_pdf = PdfFileReader(open(BLANK_FORM, 'rb'))
+    existing_pdf = PdfFileReader(open(BLANK_FORM, "rb"))
     output = PdfFileWriter()
     page = existing_pdf.getPage(0)
     page.mergePage(info_pdf.getPage(0))
@@ -533,27 +600,29 @@ def gen_member_forms(member):
     page.mergePage(topright_pdf.getPage(0))
     output.addPage(page)
 
-    file_name = str(uuid4()) + '.pdf'
-    outputStream = open(STATIC_FOLDER + file_name, 'wb')
+    file_name = str(uuid4()) + ".pdf"
+    outputStream = open(STATIC_FOLDER + file_name, "wb")
     output.write(outputStream)
 
     member.member_forms = file_name
     member.save()
 
+
 def custom_exception_handler(exc, context):
     response = exception_handler(exc, context)
     if response is not None:
-        if hasattr(exc, 'detail'):
-            logging.warning('Response: %s', json.dumps(exc.detail))
+        if hasattr(exc, "detail"):
+            logging.warning("Response: %s", json.dumps(exc.detail))
         else:
-            logging.warning('Response: %s', exc)
+            logging.warning("Response: %s", exc)
     return response
 
+
 def log_transaction(tx):
-    msg = 'Transaction log | {} | {} | {} | {} | {} | {} | {} | {} | {}'.format(
+    msg = "Transaction log | {} | {} | {} | {} | {} | {} | {} | {} | {}".format(
         tx.id,
-        tx.user.username if tx.user else 'None',
-        tx.user.member.id if tx.user else 'None',
+        tx.user.username if tx.user else "None",
+        tx.user.member.id if tx.user else "None",
         tx.account_type,
         tx.amount,
         tx.protocoin,
@@ -567,22 +636,22 @@ def log_transaction(tx):
 
 class CustomScopeClaims(ScopeClaims):
     info_vikunja_scope = (
-        _(u'vikunja_scope'),
-        _(u'Auto assign Vikunja groups'),
+        _("vikunja_scope"),
+        _("Auto assign Vikunja groups"),
     )
 
     def scope_vikunja_scope(self):
         dic = {
-            'vikunja_groups': [
+            "vikunja_groups": [
                 {
-                    'name': 'Sandbox',   # seems like everyone must have at least one team,
-                    'oidcID': 'sandbox'  # so keep this one around for expired members
+                    "name": "Sandbox",  # seems like everyone must have at least one team,
+                    "oidcID": "sandbox",  # so keep this one around for expired members
                 }
             ]
         }
 
         if not self.user.member.paused_date:
-            group = {'name': 'Protospace', 'oidcID': 'protospace'}
-            dic['vikunja_groups'].append(group)
+            group = {"name": "Protospace", "oidcID": "protospace"}
+            dic["vikunja_groups"].append(group)
 
         return dic
