@@ -1351,7 +1351,7 @@ class StatsViewSet(viewsets.ViewSet, List):
                 msg = "Usage tracker problem finding username for device: {}".format(
                     device
                 )
-                # utils.alert_tanner(msg)
+                # utils.alert_tanner(msg)curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
                 logger.error(msg)
                 username = ""
                 return Response(200)

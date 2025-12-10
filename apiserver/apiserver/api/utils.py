@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps, JpegImagePlugin
 
 JpegImagePlugin._getmp = lambda x: None
 from bleach.sanitizer import Cleaner
-from PyPDF2 import PdfFileWriter, PdfFileReader
+from PyPDF2 import PdfWriter, PdfReader
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 import paho.mqtt.publish as publish
@@ -569,7 +569,7 @@ def gen_member_forms(member):
     can.drawString(332, 570, data["emergency_contact_phone"])
     can.save()
     packet.seek(0)
-    info_pdf = PdfFileReader(packet)
+    info_pdf = PdfReader(packet)
 
     packet = io.BytesIO()
     can = canvas.Canvas(packet, pagesize=letter)
@@ -584,20 +584,20 @@ def gen_member_forms(member):
     )
     can.save()
     packet.seek(0)
-    topright_pdf = PdfFileReader(packet)
+    topright_pdf = PdfReader(packet)
 
-    existing_pdf = PdfFileReader(open(BLANK_FORM, "rb"))
-    output = PdfFileWriter()
-    page = existing_pdf.getPage(0)
-    page.mergePage(info_pdf.getPage(0))
-    page.mergePage(topright_pdf.getPage(0))
-    output.addPage(page)
-    page = existing_pdf.getPage(1)
-    page.mergePage(topright_pdf.getPage(0))
-    output.addPage(page)
-    page = existing_pdf.getPage(2)
-    page.mergePage(topright_pdf.getPage(0))
-    output.addPage(page)
+    existing_pdf = PdfReader(open(BLANK_FORM, "rb"))
+    output = PdfWriter()
+    page = existing_pdf.pages[0]
+    page.merge_page(info_pdf.pages[0])
+    page.merge_page(topright_pdf.pages[0])
+    output.add_page(page)
+    page = existing_pdf.pages[1]
+    page.merge_page(topright_pdf.pages[0])
+    output.add_page(page)
+    page = existing_pdf.pages[2]
+    page.merge_page(topright_pdf.pages[0])
+    output.add_page(page)
 
     file_name = str(uuid4()) + ".pdf"
     outputStream = open(STATIC_FOLDER + file_name, "wb")

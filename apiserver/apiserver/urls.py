@@ -41,13 +41,14 @@ router.register(
 
 urlpatterns = [
     path("", include(router.urls)),
-    re_path(r"^dj-rest-auth/login/$", views.MyLoginView.as_view(), name="rest_login"),
+    re_path(r"^rest-auth/login/$", views.MyLoginView.as_view(), name="rest_login"),
     re_path(
         r"^spaceport-auth/login/$",
         views.SpaceportAuthView.as_view(),
         name="spaceport_auth",
     ),
-    re_path(r"^dj-rest-auth/logout/$", LogoutView.as_view(), name="rest_logout"),
+    path("accounts/", include("allauth.urls")),
+    re_path(r"^rest-auth/logout/$", LogoutView.as_view(), name="rest_logout"),
     re_path(
         r"^password/reset/$",
         views.PasswordResetView.as_view(),
