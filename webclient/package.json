@@ -3,9 +3,9 @@
 	"version": "0.1.0",
 	"private": true,
 	"dependencies": {
-		"@testing-library/jest-dom": "^4.2.4",
-		"@testing-library/react": "^9.3.2",
-		"@testing-library/user-event": "^7.1.2",
+		"@testing-library/jest-dom": "^6.9.1",
+		"@testing-library/react": "^16.3.0",
+		"@testing-library/user-event": "^14.6.1",
 		"abort-controller": "^3.0.0",
 		"blueimp-load-image": "^5.13.0",
 		"darkmode-js": "~1.5.5",
@@ -13,7 +13,7 @@
 		"lodash": "^4.17.19",
 		"moment": "~2.24.0",
 		"moment-timezone": "~0.5.28",
-		"query-string": "^7.0.1",
+		"query-string": "^9.3.1",
 		"react": "^16.13.1",
 		"react-datetime": "~2.16.3",
 		"react-dom": "^16.13.1",
@@ -25,7 +25,7 @@
 		"react-to-print": "~2.5.1",
 		"recharts": "~1.8.5",
 		"semantic-ui-react": "~0.88.2",
-		"serialize-javascript": "^3.1.0",
+		"serialize-javascript": "^7.0.2",
 		"three": "^0.125.0"
 	},
 	"scripts": {
