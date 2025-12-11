@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useReducer } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
-import './semantic-ui/semantic.min.css';
+import 'semantic-ui-css/semantic.min.css';
 import './light.css';
 import './dark.css';
 import { Container, Dropdown, Menu } from 'semantic-ui-react';

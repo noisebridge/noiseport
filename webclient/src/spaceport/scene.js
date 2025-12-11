@@ -1,4 +1,4 @@
-import * as THREE from 'three/build/three.module';
+import * as THREE from 'three';
 import { Ship } from './Ship';
 import { Laser } from './Laser';
 

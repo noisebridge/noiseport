@@ -12,7 +12,7 @@ import { InstructorClassDetail, InstructorClassAttendance } from './InstructorCl
 import { PayPalPayNow } from './PayPal.js';
 import { PayWithProtocoin } from './Paymaster.js';
 import { tags } from './Courses.js';
-import * as THREE from 'three/build/three.module';
+import * as THREE from 'three';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
