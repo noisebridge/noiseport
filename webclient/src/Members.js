@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useReducer } from 'react';
-import { Switch, Route, Link, useParams, useHistory } from 'react-router-dom';
+import { Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
 import './light.css';
 import { Button, Container, Dropdown, Grid, Header, Icon, Image, Input, Item, Segment, Table } from 'semantic-ui-react';
 import { statusColor, getDiscourseLink, isAdmin, isInstructor, BasicTable, staticUrl, requester } from './utils.js';
@@ -107,7 +107,7 @@ export function Members(props) {
 	const [search, setSearch] = useState(searchCache);
 	const [controller, setController] = useState(false);
 	const { token, user } = props;
-	const history = useHistory();
+	const navigate = useNavigate();
 
 	const makeRequest = ({loadPage, q, sort_key}) => {
 		let pageNum = 0;
@@ -340,8 +340,8 @@ export function MemberDetail(props) {
 							</p>
 						}
 
-						<Switch>
-							{isAdmin(user) && <Route path='/members/:id/details'>
+						<Routes>
+							{isAdmin(user) && <Route path='/members/:id/details' element={
 								<Grid stackable columns={2}>
 									<Grid.Column width={8}>
 										<AdminMemberInfo result={result} refreshResult={refreshResult} {...props} />
@@ -438,7 +438,7 @@ export function MemberDetail(props) {
 									</Grid.Column>
 								</Grid>
 							</Route>
-						</Switch>
+						</Routes>
 					</div>
 				:
 					<p>Loading...</p>
