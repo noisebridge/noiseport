@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import ReactToPrint from 'react-to-print';
-import * as Datetime from 'react-datetime';
+import Datetime from 'react-datetime';
 import 'react-datetime/css/react-datetime.css';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
-import isSame from 'dayjs/plugin/isSameOrBefore';
 import './light.css';
 import { Button, Checkbox, Form, Grid, Header, Icon, Label, Message, Table } from 'semantic-ui-react';
 import { requester, randomString } from './utils.js';
@@ -16,7 +15,6 @@ import { MembersDropdown } from './Members.js';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(localizedFormat);
-dayjs.extend(isSame);
 
 class AttendanceSheet extends React.Component {
 	render() {

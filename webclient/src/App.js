@@ -121,6 +121,11 @@ function App() {
 		window.location.reload();
 	}
 
+	// Routes that should NOT display the menu/header (special display routes)
+	const isSpecialRoute = ['/classfeed', '/usage', '/display/lcars1', '/display/lcars2', '/display/lcars3'].some(
+		route => location.pathname.startsWith(route)
+	);
+
 	return (
 		<div>
 			<ManageScroll />
@@ -128,215 +133,187 @@ function App() {
 			<div className='content-wrap'>
 			<div className='content-wrap-inside'>
 
-			<Routes>
-				<Route path='/classfeed' element={<ClassFeed />} />
+			{!isSpecialRoute && (
+				<>
+					<Container>
+						<div className='hero'>
+							<Link to='/'>
+								<img src='/logo-long.svg' className='logo-long' />
+							</Link>
+						</div>
 
-				<Route path='/usage/:name' element={<Usage token={token} />} />
+						{window.location.hostname !== 'my.protospace.ca' &&
+							<p style={{ background: 'yellow' }}>~~~~~ Development site ~~~~~</p>
+						}
+					</Container>
 
-				<Route path='/display/lcars1' element={<LCARS1Display token={token} />} />
-
-				<Route path='/display/lcars2' element={<LCARS2Display token={token} />} />
-
-				<Route path='/display/lcars3' element={<LCARS3Display token={token} />} />
-
-				<Route path='*' element={
-					<>
+					<Menu>
 						<Container>
-							<div className='hero'>
-								<Link to='/'>
-									<img src='/logo-long.svg' className='logo-long' />
-								</Link>
-							</div>
+							<Menu.Item
+								icon='home'
+								as={Link}
+								to='/'
+							/>
 
-							{window.location.hostname !== 'my.protospace.ca' &&
-								<p style={{ background: 'yellow' }}>~~~~~ Development site ~~~~~</p>
-							}
-						</Container>
+							<Dropdown item text='Member' id='ps-menu'>
+								<Dropdown.Menu>
+									<Dropdown.Item
+										content='Account'
+										as={Link}
+										to='/account'
+									/>
+									<Dropdown.Item
+										content='Transactions'
+										as={Link}
+										to='/transactions'
+									/>
+									<Dropdown.Item
+										content='Paymaster'
+										as={Link}
+										to='/paymaster'
+									/>
+									<Dropdown.Item
+										content='Training'
+										as={Link}
+										to='/training'
+									/>
+									<Dropdown.Item
+										content='Cards / Access'
+										as={Link}
+										to='/cards'
+									/>
+								</Dropdown.Menu>
+							</Dropdown>
 
-						<Menu>
-							<Container>
-								<Menu.Item
-									icon='home'
-									as={Link}
-									to='/'
-								/>
+							<Dropdown item text='Space' id='ps-menu'>
+								<Dropdown.Menu>
+									<Dropdown.Item
+										content='Member List'
+										as={Link}
+										to='/members'
+									/>
+									<Dropdown.Item
+										content='Classes'
+										as={Link}
+										to='/classes'
+									/>
+									<Dropdown.Item
+										content='Storage'
+										as={Link}
+										to='/storage'
+									/>
+									<Dropdown.Item
+										content='Utilities'
+										as={Link}
+										to='/utils'
+									/>
+									<Dropdown.Item
+										content='Charts'
+										as={Link}
+										to='/charts'
+									/>
 
-								<Dropdown item text='Member' id='ps-menu'>
-									<Dropdown.Menu>
-										<Dropdown.Item
-											content='Account'
-											as={Link}
-											to='/account'
-										/>
-										<Dropdown.Item
-											content='Transactions'
-											as={Link}
-											to='/transactions'
-										/>
-										<Dropdown.Item
-											content='Paymaster'
-											as={Link}
-											to='/paymaster'
-										/>
-										<Dropdown.Item
-											content='Training'
-											as={Link}
-											to='/training'
-										/>
-										<Dropdown.Item
-											content='Cards / Access'
-											as={Link}
-											to='/cards'
-										/>
-									</Dropdown.Menu>
-								</Dropdown>
-
-								<Dropdown item text='Space' id='ps-menu'>
-									<Dropdown.Menu>
-										<Dropdown.Item
-											content='Member List'
-											as={Link}
-											to='/members'
-										/>
-										<Dropdown.Item
-											content='Classes'
-											as={Link}
-											to='/classes'
-										/>
-										<Dropdown.Item
-											content='Storage'
-											as={Link}
-											to='/storage'
-										/>
-										<Dropdown.Item
-											content='Utilities'
-											as={Link}
-											to='/utils'
-										/>
-										<Dropdown.Item
-											content='Charts'
-											as={Link}
-											to='/charts'
-										/>
-
-										{user && isAdmin(user) && <Dropdown.Item
-											content='Admin'
-											as={Link}
-											to='/admin'
-										/>}
-
-										{user && isAdmin(user) && <Dropdown.Item
-											content='Transactions'
-											as={Link}
-											to='/admintrans'
-										/>}
-									</Dropdown.Menu>
-								</Dropdown>
-
-								<Menu.Menu position='right'>
-									{!yousure && <Menu.Item
-										link
-										name='guide'
-										href='/guide/'
-									>
-										Guide
-									</Menu.Item>}
-
-									{user && <Menu.Item
-										content={yousure ? 'Log out?' : ''}
-										onClick={logout}
-										icon='sign out'
+									{user && isAdmin(user) && <Dropdown.Item
+										content='Admin'
+										as={Link}
+										to='/admin'
 									/>}
 
-									<Menu.Item fitted content='' />
-								</Menu.Menu>
-							</Container>
-						</Menu>
+									{user && isAdmin(user) && <Dropdown.Item
+										content='Transactions'
+										as={Link}
+										to='/admintrans'
+									/>}
+								</Dropdown.Menu>
+							</Dropdown>
 
-						<div className='topPadding'>
-							<Routes>
-								<Route path='/' element={<Home token={token} setTokenCache={setTokenCache} user={user} refreshUser={refreshUser} />} />
+							<Menu.Menu position='right'>
+								{!yousure && <Menu.Item
+									link
+									name='guide'
+									href='/guide/'
+								>
+									Guide
+								</Menu.Item>}
 
-								<Route path='/debug' element={<Debug token={token} user={user} />} />
+								{user && <Menu.Item
+									content={yousure ? 'Log out?' : ''}
+									onClick={logout}
+									icon='sign out'
+								/>}
 
-								<Route path='/password/reset/confirm/:uid/:token' element={<ConfirmReset />} />
-								<Route path='/password/reset' element={<PasswordReset />} />
+								<Menu.Item fitted content='' />
+							</Menu.Menu>
+						</Container>
+					</Menu>
+				</>
+			)}
 
-								<Route path='/utils' element={<Paste token={token} />} />
+			<div className={isSpecialRoute ? '' : 'topPadding'}>
+				<Routes>
+					{/* Special routes without menu/header */}
+					<Route path='/classfeed' element={<ClassFeed />} />
+					<Route path='/usage/:name' element={<Usage token={token} />} />
+					<Route path='/display/lcars1' element={<LCARS1Display token={token} />} />
+					<Route path='/display/lcars2' element={<LCARS2Display token={token} />} />
+					<Route path='/display/lcars3' element={<LCARS3Display token={token} />} />
 
-								<Route path='/sign' element={<Sign token={token} />} />
+					{/* Public routes */}
+					<Route path='/' element={<Home token={token} setTokenCache={setTokenCache} user={user} refreshUser={refreshUser} />} />
+					<Route path='/debug' element={<Debug token={token} user={user} />} />
+					<Route path='/password/reset/confirm/:uid/:token' element={<ConfirmReset />} />
+					<Route path='/password/reset' element={<PasswordReset />} />
+					<Route path='/utils' element={<Paste token={token} />} />
+					<Route path='/sign' element={<Sign token={token} />} />
+					<Route path='/out-of-stock' element={<OutOfStock token={token} />} />
+					<Route path='/charts' element={<Charts />} />
+					<Route path='/auth' element={<Auth token={token} user={user} />} />
+					<Route path='/subscribe' element={<Subscribe />} />
+					<Route path='/classes' element={<Classes token={token} user={user} refreshUser={refreshUser} />} />
+					<Route path='/add-new-tool' element={<AddNewTool token={token} />} />
+					<Route path='/garden' element={<Garden />} />
 
-								<Route path='/out-of-stock' element={<OutOfStock token={token} />} />
+					{/* Authenticated routes requiring token */}
+					{token && <Route path='/oidc' element={<AuthOIDC token={token} />} />}
 
-								<Route path='/charts' element={<Charts />} />
+					{/* Routes requiring full user account setup */}
+					{user && user.member.set_details && (
+						<>
+							<Route path='/storage/:id' element={<StorageDetail token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/storage' element={<Storage token={token} user={user} />} />
+							<Route path='/claimshelf/:id' element={<ClaimShelf token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/claimshelf' element={<ClaimShelf token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/account' element={<Account token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/transactions/:id' element={<TransactionDetail token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/transactions' element={<Transactions user={user} />} />
+							<Route path='/paymaster' element={<Paymaster token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/cards' element={<Cards token={token} user={user} />} />
+							<Route path='/training' element={<Training user={user} />} />
+							<Route path='/quiz/scanner' element={<ScannerQuiz token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/quiz/sawstop' element={<SawstopQuiz token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/courses/:id' element={<CourseDetail token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/courses' element={<Courses token={token} user={user} />} />
+							<Route path='/classes/:id' element={<ClassDetail token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/members/:id' element={<MemberDetail token={token} user={user} setUser={setUserCache}/>} />
+							<Route path='/members' element={<Members token={token} user={user} />} />
 
-								<Route path='/auth' element={<Auth token={token} user={user} />} />
+							{isAdmin(user) && (
+								<>
+									<Route path='/admin' element={<Admin token={token} user={user} />} />
+									<Route path='/admintrans' element={<AdminTransactions token={token} user={user} />} />
+								</>
+							)}
+						</>
+					)}
 
-								<Route path='/subscribe' element={<Subscribe />} />
-
-								<Route path='/classes' element={<Classes token={token} user={user} refreshUser={refreshUser} />} />
-
-								<Route path='/add-new-tool' element={<AddNewTool token={token} />} />
-
-								<Route path='/garden' element={<Garden />} />
-
-								{token ?
-									<Route path='/oidc' element={<AuthOIDC token={token} />} />
-								:
-									<Route path='*' element={<PleaseLogin />} />
-								}
-
-								{user && user.member.set_details ?
-									<>
-										<Route path='/storage/:id' element={<StorageDetail token={token} user={user} refreshUser={refreshUser} />} />
-
-										<Route path='/storage' element={<Storage token={token} user={user} />} />
-
-										<Route path='/claimshelf/:id' element={<ClaimShelf token={token} user={user} refreshUser={refreshUser} />} />
-										<Route path='/claimshelf' element={<ClaimShelf token={token} user={user} refreshUser={refreshUser} />} />
-
-										<Route path='/account' element={<Account token={token} user={user} refreshUser={refreshUser} />} />
-
-										<Route path='/transactions/:id' element={<TransactionDetail token={token} user={user} refreshUser={refreshUser} />} />
-										<Route path='/transactions' element={<Transactions user={user} />} />
-
-										<Route path='/paymaster' element={<Paymaster token={token} user={user} refreshUser={refreshUser} />} />
-
-										<Route path='/cards' element={<Cards token={token} user={user} />} />
-
-										<Route path='/training' element={<Training user={user} />} />
-
-										<Route path='/quiz/scanner' element={<ScannerQuiz token={token} user={user} refreshUser={refreshUser} />} />
-
-										<Route path='/quiz/sawstop' element={<SawstopQuiz token={token} user={user} refreshUser={refreshUser} />} />
-
-										<Route path='/courses/:id' element={<CourseDetail token={token} user={user} refreshUser={refreshUser} />} />
-
-										<Route path='/courses' element={<Courses token={token} user={user} />} />
-
-										<Route path='/classes/:id' element={<ClassDetail token={token} user={user} refreshUser={refreshUser} />} />
-
-										<Route path='/members/:id' element={<MemberDetail token={token} user={user} setUser={setUserCache}/>} />
-										<Route path='/members' element={<Members token={token} user={user} />} />
-
-										{user && isAdmin(user) &&
-											<Route path='/admin' element={<Admin token={token} user={user} />} />
-										}
-
-										{user && isAdmin(user) &&
-											<Route path='/admintrans' element={<AdminTransactions token={token} user={user} />} />
-										}
-
-										<Route path='*' element={<NotFound />} />
-									</>
-								:
-									<Route path='*' element={<PleaseLogin />} />
-								}
-							</Routes>
-						</div>
-					</>
-				} />
-			</Routes>
+					{/* Catch-all routes based on authentication state */}
+					{user && user.member.set_details ? (
+						<Route path='*' element={<NotFound />} />
+					) : (
+						<Route path='*' element={<PleaseLogin />} />
+					)}
+				</Routes>
+			</div>
 
 			</div>
 			</div>
