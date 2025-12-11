@@ -139,7 +139,7 @@ function App() {
 
 				<Route path='/display/lcars3' element={<LCARS3Display token={token} />} />
 
-				<Route path='*' element={
+				<Route path='/' element={
 					<>
 						<Container>
 							<div className='hero'>

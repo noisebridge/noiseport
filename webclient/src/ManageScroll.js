@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 let scrollPositions = {};
 let timeout = null;
 
 export function ManageScroll() {
-	const history = useHistory();
+	const location = useLocation();
 
 	const scrollListener = () => {
 		if (timeout) {
@@ -13,7 +13,7 @@ export function ManageScroll() {
 		}
 
 		timeout = window.requestAnimationFrame(() => {
-			const key = history.location.key;
+			const key = location.key;
 			if (key in scrollPositions) {
 				scrollPositions[key] = window.scrollY;
 			}
@@ -28,7 +28,7 @@ export function ManageScroll() {
 	}, []);
 
 	useEffect(() => {
-		const key = history.location.key;
+		const key = location.key;
 
 		if (key in scrollPositions) {
 			window.scrollTo(0, scrollPositions[key]);
@@ -36,7 +36,7 @@ export function ManageScroll() {
 			window.scrollTo(0, 0);
 			scrollPositions[key] = 0;
 		}
-	}, [history.location]);
+	}, [location]);
 
 	return (
 		null

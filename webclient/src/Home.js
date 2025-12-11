@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useReducer } from 'react';
-import { Link, useParams, useHistory } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import moment from 'moment-timezone';
 import QRCode from 'react-qr-code';
 import './light.css';
@@ -14,7 +14,6 @@ import { PayPalSubscribeDeal } from './PayPal.js';
 function MemberInfo(props) {
 	const user = props.user;
 	const member = user.member;
-	const history = useHistory();
 
 	const lastTrans = user.transactions?.slice(0,3);
 	const lastTrain = user.training?.sort((a, b) => a.session.datetime < b.session.datetime ? 1 : -1).slice(0,3);

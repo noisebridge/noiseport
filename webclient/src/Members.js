@@ -357,33 +357,33 @@ export function MemberDetail(props) {
 										</Segment>
 									</Grid.Column>
 								</Grid>
-							</Route>}
+							} />}
 
-							{isAdmin(user) && <Route path='/members/:id/cards'>
+							{isAdmin(user) && <Route path='/members/:id/cards' element={
 								<AdminMemberCards result={result} refreshResult={refreshResult} {...props} />
-							</Route>}
+							} />}
 
-							{isAdmin(user) && <Route path='/members/:id/lockouts'>
+							{isAdmin(user) && <Route path='/members/:id/lockouts' element={
 								<AdminMemberCertifications result={result} refreshResult={refreshResult} {...props} />
-							</Route>}
+							} />}
 
-							{isAdmin(user) && <Route path='/members/:id/training'>
+							{isAdmin(user) && <Route path='/members/:id/training' element={
 								<AdminMemberTraining result={result} refreshResult={refreshResult} {...props} />
-							</Route>}
+							} />}
 
-							{isAdmin(user) && <Route path='/members/:id/transactions'>
+							{isAdmin(user) && <Route path='/members/:id/transactions' element={
 								<AdminMemberTransactions result={result} refreshResult={refreshResult} {...props} />
-							</Route>}
+							} />}
 
-							{isAdmin(user) && <Route path='/members/:id/history'>
+							{isAdmin(user) && <Route path='/members/:id/history' element={
 								<AdminHistory filterMember={member.id} {...props} />
-							</Route>}
+							} />}
 
-							{isAdmin(user) && <Route path='/members/:id/accounting'>
+							{isAdmin(user) && <Route path='/members/:id/accounting' element={
 								<AdminAccounting result={result} {...props} />
-							</Route>}
+							} />}
 
-							<Route path='/members/:id'>
+							<Route path='/members/:id' element={
 								<Grid stackable columns={2}>
 									<Grid.Column width={5}>
 										<p>
@@ -437,7 +437,7 @@ export function MemberDetail(props) {
 										}
 									</Grid.Column>
 								</Grid>
-							</Route>
+							} />
 						</Routes>
 					</div>
 				:

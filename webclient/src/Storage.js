@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useReducer } from 'react';
-import { Link, useParams, useHistory } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import './light.css';
 import moment from 'moment-timezone';
 import { MembersDropdown } from './Members.js';
@@ -267,7 +267,7 @@ export function StorageDetail(props) {
 
 export function StorageButton(props) {
 	const { storage } = props;
-	const history = useHistory();
+	const navigate = useNavigate();
 
 	const buttonColors = {
 		member_shelves: 'grey',
@@ -278,7 +278,7 @@ export function StorageButton(props) {
 
 	const handleStorageButton = (e, id) => {
 		e.preventDefault();
-		history.push('/storage/' + id);
+		navigate('/storage/' + id);
 	};
 
 	return (
@@ -509,7 +509,7 @@ export function ClaimShelfForm(props) {
 	const [input, setInput] = useState({shelf_id: id});
 	const [error, setError] = useState({});
 	const [loading, setLoading] = useState(false);
-	const history = useHistory();
+	const navigate = useNavigate();
 
 	const handleValues = (e, v) => setInput({ ...input, [v.name]: v.value });
 	const handleChange = (e) => handleValues(e, e.currentTarget);
@@ -521,7 +521,7 @@ export function ClaimShelfForm(props) {
 		.then(res => {
 			setError({});
 			refreshUser();
-			history.push('/');
+			navigate('/');
 		})
 		.catch(err => {
 			setLoading(false);

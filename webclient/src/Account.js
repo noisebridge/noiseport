@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import * as loadImage from 'blueimp-load-image';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -13,7 +13,7 @@ function LogoutEverywhere(props) {
 	const [error, setError] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [yousure, setYousure] = useState(false);
-	const history = useHistory();
+	const navigate = useNavigate();
 
 	const handleClick = () => {
 		if (yousure) {
@@ -22,7 +22,7 @@ function LogoutEverywhere(props) {
 			requester('/rest-auth/logout/', 'POST', token, {})
 			.then(res => {
 				setYousure(false);
-				history.push('/');
+				navigate('/');
 				window.scrollTo(0, 0);
 			})
 			.catch(err => {
@@ -56,7 +56,7 @@ function ChangePasswordForm(props) {
 	const [error, setError] = useState({});
 	const [progress, setProgress] = useState([]);
 	const [loading, setLoading] = useState(false);
-	const history = useHistory();
+	const navigate = useNavigate();
 
 	const handleValues = (e, v) => setInput({ ...input, [v.name]: v.value });
 	const handleChange = (e) => handleValues(e, e.currentTarget);
@@ -82,7 +82,7 @@ function ChangePasswordForm(props) {
 		.then(res => {
 			clearInterval(interval);
 			setError({});
-			history.push('/');
+			navigate('/');
 		})
 		.catch(err => {
 			clearInterval(interval);
@@ -176,7 +176,7 @@ export function AccountForm(props) {
 	const [error, setError] = useState({});
 	const [loading, setLoading] = useState(false);
 	const [crop, setCrop] = useState(false);
-	const history = useHistory();
+	const navigate = useNavigate();
 
 	const handleValues = (e, v) => setInput({ ...input, [v.name]: v.value });
 	const handleUpload = (e, v) => setInput({ ...input, [v.name]: e.target.files[0] });
@@ -191,7 +191,7 @@ export function AccountForm(props) {
 		.then(res => {
 			setError({});
 			refreshUser();
-			history.push('/');
+			navigate('/');
 		})
 		.catch(err => {
 			setLoading(false);
@@ -341,7 +341,7 @@ export function BioNotesForm(props) {
 	const [input, setInput] = useState({ ...member, set_details: true });
 	const [error, setError] = useState({});
 	const [loading, setLoading] = useState(false);
-	const history = useHistory();
+	const navigate = useNavigate();
 
 	const handleValues = (e, v) => setInput({ ...input, [v.name]: v.value });
 	const handleChange = (e) => handleValues(e, e.currentTarget);
@@ -353,7 +353,7 @@ export function BioNotesForm(props) {
 		.then(res => {
 			setError({});
 			refreshUser();
-			history.push('/');
+			navigate('/');
 		})
 		.catch(err => {
 			setLoading(false);
