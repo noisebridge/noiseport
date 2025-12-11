@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Statistic, Button, Container, Header } from 'semantic-ui-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { requester, useIsMobile } from './utils.js';
-import moment from 'moment-timezone';
+import dayjs from 'dayjs';
 
 let memberCountCache = false;
 let signupCountCache = false;
@@ -301,7 +301,7 @@ export function Charts(props) {
 							<XAxis dataKey='date' minTickGap={10} />
 							<YAxis />
 							<CartesianGrid strokeDasharray='3 3'/>
-							<Tooltip labelFormatter={t => moment(t).format('YYYY-MM-DD ddd')} />
+							<Tooltip labelFormatter={t => dayjs(t).format('YYYY-MM-DD ddd')} />
 							<Legend />
 
 							<Bar
