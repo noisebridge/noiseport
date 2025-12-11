@@ -3,6 +3,9 @@ import { Statistic, Button, Container, Header } from 'semantic-ui-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { requester, useIsMobile } from './utils.js';
 import dayjs from 'dayjs';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
+
+dayjs.extend(localizedFormat);
 
 let memberCountCache = false;
 let signupCountCache = false;

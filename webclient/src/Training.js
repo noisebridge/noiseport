@@ -2,8 +2,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import './light.css';
 import { Container, Header, Popup, Table } from 'semantic-ui-react';
-import moment from 'moment-timezone';
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
 import { getInstructor, useIsMobile } from './utils.js';
+
+dayjs.extend(timezone);
+dayjs.extend(localizedFormat);
 
 export function CertList(props) {
 	const { member } = props;
@@ -110,7 +115,7 @@ export function TrainingList(props) {
 					<Table.Row key={x.id}>
 						<Table.Cell>{x.session.course_data.name}</Table.Cell>
 						<Table.Cell>
-							<Link style={{whiteSpace: 'nowrap'}} to={'/classes/'+x.session.id}>{moment(x.session.datetime).tz('America/Edmonton').format('ll')}</Link>
+							<Link style={{whiteSpace: 'nowrap'}} to={'/classes/'+x.session.id}>{dayjs(x.session.datetime).tz('America/Edmonton').format('ll')}</Link>
 						</Table.Cell>
 						<Table.Cell>{isMobile && 'Attendance: '}{x.attendance_status}</Table.Cell>
 						<Table.Cell>{isMobile && 'Instructor: '}{getInstructor(x.session)}</Table.Cell>

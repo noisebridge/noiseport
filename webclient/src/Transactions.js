@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import moment from 'moment-timezone';
+import dayjs from 'dayjs';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
 import ReactToPrint from 'react-to-print';
 import './light.css';
 import { Button, Container, Form, Grid, Header, Message, Segment, Table } from 'semantic-ui-react';
 import { MembersDropdown } from './Members.js';
 import { isAdmin, BasicTable, requester, useIsMobile } from './utils.js';
 import { NotFound } from './Misc.js';
+
+dayjs.extend(localizedFormat);
 
 export function TransactionEditor(props) {
 	const { token, input, setInput, error } = props;
@@ -278,7 +281,7 @@ export function TransactionList(props) {
 					transactions.map(x =>
 						<Table.Row key={x.id}>
 							{!noDate && <Table.Cell style={{ minWidth: '8rem' }}>
-								<Link to={'/transactions/'+x.id}>{moment(x.date).format('ll')}</Link>
+								<Link to={'/transactions/'+x.id}>{dayjs(x.date).format('ll')}</Link>
 							</Table.Cell>}
 
 							{!noMember && <Table.Cell>

@@ -2,10 +2,17 @@ import React, { useState, useEffect, useReducer } from 'react';
 import { Link } from 'react-router-dom';
 import './light.css';
 import { Button, Container, Checkbox, Form, Header, Icon, Table } from 'semantic-ui-react';
-import * as Datetime from 'react-datetime';
-import moment from 'moment-timezone';
+import Datetime from 'react-datetime';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
 import download from 'downloadjs';
 import { apiUrl, statusColor, requester, useIsMobile } from './utils.js';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(localizedFormat);
 
 let vettingCache = false;
 let historyCache = false;
@@ -23,7 +30,7 @@ export function AdminVet(props) {
 
 		if (yousure) {
 			setLoading(true);
-			const data = {vetted_date: moment.utc().tz('America/Edmonton').format('YYYY-MM-DD')}
+			const data = {vetted_date: dayjs.utc().tz('America/Edmonton').format('YYYY-MM-DD')}
 			requester('/members/' + member.id + '/', 'PATCH', token, data)
 			.then(res => {
 				refreshVetting();
@@ -181,7 +188,7 @@ export function AdminHistory(props) {
 										<Table.Row>
 											<Table.Cell>
 												<a onClick={() => setFocus(x.id)}>
-													{moment.utc(x.history_date).tz('America/Edmonton').format('YYYY-MM-DD')}
+													{dayjs.utc(x.history_date).tz('America/Edmonton').format('YYYY-MM-DD')}
 												</a>
 											</Table.Cell>
 											<Table.Cell>{isMobile && 'User: '}{x.is_system ? 'System' : (x.history_user || 'Deleted User')}</Table.Cell>
@@ -266,7 +273,7 @@ export function AdminBackups(props) {
 							{backups.filter(x => x.download_time).map(x =>
 								<Table.Row key={x.backup_user}>
 									<Table.Cell>{isMobile && 'User: '}{x.backup_user}</Table.Cell>
-									<Table.Cell>{isMobile && 'Last: '}{moment.utc(x.download_time).tz('America/Edmonton').format('LLLL')}</Table.Cell>
+									<Table.Cell>{isMobile && 'Last: '}{dayjs.utc(x.download_time).tz('America/Edmonton').format('LLLL')}</Table.Cell>
 									<Table.Cell>{isMobile && '24h ago: '}{x.less_than_24h ? 'Yes' : 'No - please investigate'}</Table.Cell>
 								</Table.Row>
 							)}
@@ -283,7 +290,7 @@ export function AdminBackups(props) {
 
 export function AdminUsage(props) {
 	const { token } = props;
-	const [input, setInput] = useState({ month: moment() });
+	const [input, setInput] = useState({ month: dayjs() });
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(false);
 

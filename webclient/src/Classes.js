@@ -2,7 +2,10 @@ import React, { useState, useEffect, useReducer, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import './light.css';
 import { Label, Button, Container, Dropdown, Form, FormField, Header, Icon, Input, Segment, Table } from 'semantic-ui-react';
-import moment from 'moment-timezone';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
 import { apiUrl, isAdmin, getInstructor, getInstructorDiscourseLink, BasicTable, requester, useIsMobile } from './utils.js';
 import { NotFound } from './Misc.js';
 import { InstructorClassDetail, InstructorClassAttendance } from './InstructorClasses.js';
@@ -10,6 +13,10 @@ import { PayPalPayNow } from './PayPal.js';
 import { PayWithProtocoin } from './Paymaster.js';
 import { tags } from './Courses.js';
 import * as THREE from 'three/build/three.module';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(localizedFormat);
 
 function ClassTable(props) {
 	const { classes } = props;
@@ -29,10 +36,10 @@ function ClassTable(props) {
 							<Table.Cell>{x.course_data.name}</Table.Cell>
 							<Table.Cell>
 								<Link to={'/classes/'+x.id}>
-									{moment.utc(x.datetime).tz('America/Edmonton').format('ddd, ll')}
+									{dayjs.utc(x.datetime).tz('America/Edmonton').format('ddd, ll')}
 								</Link>
 								<span style={{float: 'right'}}>
-									Time: {x.is_cancelled ? 'Cancelled' : moment.utc(x.datetime).tz('America/Edmonton').format('LT')}
+									Time: {x.is_cancelled ? 'Cancelled' : dayjs.utc(x.datetime).tz('America/Edmonton').format('LT')}
 								</span>
 							</Table.Cell>
 							<Table.Cell>
@@ -76,10 +83,10 @@ function ClassTable(props) {
 							<Table.Cell>&nbsp;{x.course_data.name}</Table.Cell>
 							<Table.Cell>
 								<Link to={'/classes/'+x.id}>
-									{moment.utc(x.datetime).tz('America/Edmonton').format('ddd, ll')}
+									{dayjs.utc(x.datetime).tz('America/Edmonton').format('ddd, ll')}
 								</Link>
 							</Table.Cell>
-							<Table.Cell>{x.is_cancelled ? 'Cancelled' : moment.utc(x.datetime).tz('America/Edmonton').format('LT')}</Table.Cell>
+							<Table.Cell>{x.is_cancelled ? 'Cancelled' : dayjs.utc(x.datetime).tz('America/Edmonton').format('LT')}</Table.Cell>
 							<Table.Cell>{getInstructor(x)}</Table.Cell>
 							<Table.Cell>{x.cost === '0.00' ? 'Free' : '$'+x.cost}</Table.Cell>
 							<Table.Cell>
@@ -269,9 +276,9 @@ function NewClassTableCourse(props) {
 								<Table.Row key={x.id} active={x.datetime < now || x.is_cancelled}>
 									<Table.Cell>
 										<Link to={'/classes/'+x.id}>
-											{moment.utc(x.datetime).tz('America/Edmonton').format(' MMM Do')}
+											{dayjs.utc(x.datetime).tz('America/Edmonton').format(' MMM Do')}
 										</Link>
-										{' - '}{x.is_cancelled ? 'Cancelled' : moment.utc(x.datetime).tz('America/Edmonton').format('LT')}
+										{' - '}{x.is_cancelled ? 'Cancelled' : dayjs.utc(x.datetime).tz('America/Edmonton').format('LT')}
 									</Table.Cell>
 
 									<Table.Cell>{x.cost === '0.00' ? 'Free' : '$'+x.cost.slice(0,-3)}</Table.Cell>
@@ -605,9 +612,9 @@ export function ICalButtons(props) {
 		e.preventDefault();
 
 		// construct and set the dates format that google calendar links require
-		let starttime = moment(clazz.datetime);
-		let endtime = starttime.clone().add(1, 'hour');
-		const datestringfmt = 'YYYYMMDDTkkmmss';
+		let starttime = dayjs(clazz.datetime);
+		let endtime = starttime.add(1, 'hour');
+		const datestringfmt = 'YYYYMMDDTHHmmss';
 		let dates = `${starttime.format(datestringfmt)}/${endtime.format(datestringfmt)}`
 
 		// send user to google calendar
@@ -1609,13 +1616,13 @@ export function Class(props) {
 				<Table.Row>
 					<Table.Cell>Date:</Table.Cell>
 					<Table.Cell>
-						{moment.utc(clazz.datetime).tz('America/Edmonton').format('ll')}
+						{dayjs.utc(clazz.datetime).tz('America/Edmonton').format('ll')}
 					</Table.Cell>
 				</Table.Row>
 				<Table.Row>
 					<Table.Cell>Time:</Table.Cell>
 					<Table.Cell>
-						{clazz.is_cancelled ? 'Cancelled' : moment.utc(clazz.datetime).tz('America/Edmonton').format('LT')}
+						{clazz.is_cancelled ? 'Cancelled' : dayjs.utc(clazz.datetime).tz('America/Edmonton').format('LT')}
 					</Table.Cell>
 				</Table.Row>
 				<Table.Row>

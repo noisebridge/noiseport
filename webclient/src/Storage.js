@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useReducer } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import './light.css';
-import moment from 'moment-timezone';
+import dayjs from 'dayjs';
 import { MembersDropdown } from './Members.js';
 import { statusColor, isAdmin, BasicTable, requester, useIsMobile } from './utils.js';
 import { Button, Checkbox, Container, Form, Grid, Header, Icon, Input, Message, Segment, Table } from 'semantic-ui-react';
@@ -187,7 +187,7 @@ function StorageTable(props) {
 export function StorageTakeover(props) {
 	const { storage } = props;
 
-	const daysRemaining = 180 - moment().diff(moment(storage.member_paused), 'days');
+	const daysRemaining = 180 - dayjs().diff(dayjs(storage.member_paused), 'days');
 
 	return (
 		<>

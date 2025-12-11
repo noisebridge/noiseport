@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import moment from 'moment-timezone';
+import dayjs from 'dayjs';
 import { Button, Container, Header } from 'semantic-ui-react';
 import { requester } from './utils.js';
 
@@ -44,7 +44,7 @@ export function Usage(props) {
 		});
 	};
 
-	const inUse = usage && moment().unix() - usage.track.time <= 60;
+	const inUse = usage && dayjs().unix() - usage.track.time <= 60;
 	const showUsage = usage && inUse && usage.track.username === usage.username;
 
 	return (
