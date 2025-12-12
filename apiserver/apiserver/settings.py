@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     "apiserver.api",
     "oidc_provider",
     "dj_rest_auth",
+    "dj_rest_auth.registration",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",  # to support user deletion
@@ -277,7 +278,7 @@ LOGGING = {
 logging.config.dictConfig(LOGGING)
 
 SITE_ID = 1
-# Updated deprecated settings for Django-allauth
+# Django-allauth settings - maintaining original behavior
 SIGNUP_FIELDS = {
     "username": {
         "required": True,
@@ -287,10 +288,10 @@ SIGNUP_FIELDS = {
     },
 }
 ACCOUNT_LOGIN_METHODS = {
-    "username",
-    "email",
+    "username",  # Username-only login (original behavior)
 }
-# Updated to include email as login method
+ACCOUNT_USERNAME_MIN_LENGTH = 3
+ACCOUNT_EMAIL_VERIFICATION = "none"  # Email verification disabled
 OLD_PASSWORD_FIELD_ENABLED = True
 LOGOUT_ON_PASSWORD_CHANGE = False
 ACCOUNT_PRESERVE_USERNAME_CASING = False

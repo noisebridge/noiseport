@@ -1765,7 +1765,7 @@ class UsageViewSet(Base):
         if month:
             try:
                 dt = datetime.datetime.strptime(month, "%Y-%m")
-                dt = utils.TIMEZONE_CALGARY.localize(dt)
+                dt = dt.replace(tzinfo=utils.TIMEZONE_CALGARY)
             except ValueError:
                 raise exceptions.ValidationError(dict(month="Should be YYYY-MM."))
 

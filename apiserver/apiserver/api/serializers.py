@@ -974,7 +974,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             date = next_date(calendar.SATURDAY, week_num=3)
             time = datetime.time(10, 0)
             dt = datetime.datetime.combine(date, time)
-            dt = utils.TIMEZONE_CALGARY.localize(dt)
+            dt = dt.replace(tzinfo=utils.TIMEZONE_CALGARY)
             cost = 0
             max_students = None
         elif obj.id == 317:
@@ -992,7 +992,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
                 date = next_date(calendar.THURSDAY, week_num=3)
             time = datetime.time(19, 0)
             dt = datetime.datetime.combine(date, time)
-            dt = utils.TIMEZONE_CALGARY.localize(dt)
+            dt = dt.replace(tzinfo=utils.TIMEZONE_CALGARY)
             cost = 0
             max_students = None
         elif prev_session:

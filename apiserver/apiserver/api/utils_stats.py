@@ -255,7 +255,7 @@ def check_shopping_list():
 def calc_card_scans():
     date = utils.today_alberta_tz()
     dt = datetime.combine(date, datetime.min.time())
-    midnight = utils.TIMEZONE_CALGARY.localize(dt)
+    midnight = dt.replace(tzinfo=utils.TIMEZONE_CALGARY)
 
     cards = models.Card.objects
     count = cards.filter(last_seen__gte=midnight).count()
