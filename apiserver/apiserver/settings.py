@@ -144,7 +144,7 @@ DATABASES = {
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.memcached.PyMemcacheCache",
-        "LOCATION": "192.168.215.2",  # FIXME "127.0.0.1:11211",
+        "LOCATION": "127.0.0.1:11211",
         "TIMEOUT": None,
     }
 }
@@ -278,19 +278,19 @@ logging.config.dictConfig(LOGGING)
 
 SITE_ID = 1
 # Django-allauth settings - maintaining original behavior
-SIGNUP_FIELDS = {
-    "username": {
-        "required": True,
-    },
-    "email": {
-        "required": True,
-    },
-}
-ACCOUNT_LOGIN_METHODS = {
-    "username",  # Username-only login (original behavior)
+# ACCOUNT_AUTHENTICATION_METHOD is deprecated in v65+ but kept for compatibility
+ACCOUNT_AUTHENTICATION_METHOD = "username"
+ACCOUNT_LOGIN_METHODS = {"username"}  # New setting for v65+: username-only login
+ACCOUNT_SIGNUP_FIELDS = {  # New setting for v65+: required signup fields
+    "username": {"required": True},
+    "email": {"required": True},
 }
 ACCOUNT_USERNAME_MIN_LENGTH = 3
-ACCOUNT_EMAIL_VERIFICATION = "none"  # Email verification disabled
+ACCOUNT_EMAIL_VERIFICATION = "none"
+# Keep old settings for backward compatibility with any custom code
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_EMAIL_REQUIRED = True
+
 OLD_PASSWORD_FIELD_ENABLED = True
 LOGOUT_ON_PASSWORD_CHANGE = False
 ACCOUNT_PRESERVE_USERNAME_CASING = False

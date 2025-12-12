@@ -5,4 +5,4 @@ class ApiConfig(AppConfig):
     name = "apiserver.api"
 
     def ready(self):
-        pass
+        from . import signals

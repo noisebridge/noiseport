@@ -47,7 +47,6 @@ urlpatterns = [
         views.SpaceportAuthView.as_view(),
         name="spaceport_auth",
     ),
-    path("accounts/", include("allauth.urls")),
     re_path(r"^rest-auth/logout/$", LogoutView.as_view(), name="rest_logout"),
     re_path(
         r"^password/reset/$",
