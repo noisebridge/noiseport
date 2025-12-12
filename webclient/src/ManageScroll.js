@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 
 let scrollPositions = {};
@@ -7,7 +7,7 @@ let timeout = null;
 export function ManageScroll() {
 	const location = useLocation();
 
-	const scrollListener = () => {
+	const scrollListener = useCallback(() => {
 		if (timeout) {
 			window.cancelAnimationFrame(timeout);
 		}
@@ -18,14 +18,14 @@ export function ManageScroll() {
 				scrollPositions[key] = window.scrollY;
 			}
 		});
-	};
+	}, [location]);
 
 	useEffect(() => {
 		window.addEventListener('scroll', scrollListener);
 		return () => {
 			window.removeEventListener('scroll', scrollListener);
 		}
-	}, []);
+	}, [scrollListener]);
 
 	useEffect(() => {
 		const key = location.key;

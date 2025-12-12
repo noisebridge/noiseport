@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Route, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import * as THREE from 'three';
 import './light.css';
 import { Container, Form, Header, Image, Message, Segment } from 'semantic-ui-react';
@@ -312,13 +312,10 @@ export function Auth(props) {
 				<p>Note: you should only ever need to do this once if you are an old returning member. Otherwise, just sign into each app with your Spaceport login.</p>
 			</Message>
 
-			<Route path='/auth/wiki'>
-				<AuthWiki user={user} />
-			</Route>
-
-			<Route path='/auth/discourse'>
-				<AuthDiscourse user={user} />
-			</Route>
+			<Routes>
+				<Route path='/auth/wiki' element={<AuthWiki user={user} />} />
+				<Route path='/auth/discourse' element={<AuthDiscourse user={user} />} />
+			</Routes>
 		</Container>
 	);
 }
