@@ -354,9 +354,9 @@ function InstructorClassEditor(props) {
 				<Datetime
 					timeConstraints={{ minutes: { step: 15 } }}
 					value={ input.datetime ?
-						dayjs.utc(input.datetime).tz('America/Edmonton')
+						dayjs.utc(input.datetime).tz('America/Edmonton').toDate()
 					:
-						dayjs().tz('America/Edmonton').set('minute', 0)
+						dayjs().tz('America/Edmonton').set('minute', 0).toDate()
 					}
 					onChange={handleDatetime}
 					input={false}
@@ -494,7 +494,7 @@ export function InstructorClassList(props) {
 
 	useEffect(() => {
 		setSameClasses(classes.filter(x =>
-			dayjs.utc(x.datetime).tz('America/Edmonton').isSame(dayjs(input.datetime), 'day')
+			dayjs.utc(x.datetime).tz('America/Edmonton').isSame(dayjs.utc(input.datetime).tz('America/Edmonton'), 'day')
 		).sort((a, b) => a.datetime > b.datetime ? 1 : -1));
 	}, [input.datetime]);
 
