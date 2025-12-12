@@ -1,10 +1,12 @@
-import django, sys, os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'apiserver.settings'
+import django
+import os
+
+os.environ["DJANGO_SETTINGS_MODULE"] = "apiserver.settings"
 django.setup()
 
 from apiserver.api import models
 
-data = '''
+data = """
 2020-03-02,74
 2020-03-03,77
 2020-03-04,79
@@ -697,15 +699,15 @@ data = '''
 2022-01-20,131
 2022-01-21,131
 2022-01-22,131
-'''
+"""
 
 for row in data.split():
-    date, count = row.split(',')
-    print('Adding', date, count)
+    date, count = row.split(",")
+    print("Adding", date, count)
 
     models.StatsMemberCount.objects.update_or_create(
         date=date,
         defaults=dict(subscriber_count=count),
     )
 
-print('Done.')
+print("Done.")

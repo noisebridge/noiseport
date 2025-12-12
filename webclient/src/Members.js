@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useReducer } from 'react';
-import { Switch, Route, Link, useParams, useHistory } from 'react-router-dom';
+import { Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
 import './light.css';
 import { Button, Container, Dropdown, Grid, Header, Icon, Image, Input, Item, Segment, Table } from 'semantic-ui-react';
 import { statusColor, getDiscourseLink, isAdmin, isInstructor, BasicTable, staticUrl, requester } from './utils.js';
@@ -107,7 +107,7 @@ export function Members(props) {
 	const [search, setSearch] = useState(searchCache);
 	const [controller, setController] = useState(false);
 	const { token, user } = props;
-	const history = useHistory();
+	const navigate = useNavigate();
 
 	const makeRequest = ({loadPage, q, sort_key}) => {
 		let pageNum = 0;
@@ -340,8 +340,8 @@ export function MemberDetail(props) {
 							</p>
 						}
 
-						<Switch>
-							{isAdmin(user) && <Route path='/members/:id/details'>
+						<Routes>
+							{isAdmin(user) && <Route path='/members/:id/details' element={
 								<Grid stackable columns={2}>
 									<Grid.Column width={8}>
 										<AdminMemberInfo result={result} refreshResult={refreshResult} {...props} />
@@ -357,33 +357,33 @@ export function MemberDetail(props) {
 										</Segment>
 									</Grid.Column>
 								</Grid>
-							</Route>}
+							} />}
 
-							{isAdmin(user) && <Route path='/members/:id/cards'>
+							{isAdmin(user) && <Route path='/members/:id/cards' element={
 								<AdminMemberCards result={result} refreshResult={refreshResult} {...props} />
-							</Route>}
+							} />}
 
-							{isAdmin(user) && <Route path='/members/:id/lockouts'>
+							{isAdmin(user) && <Route path='/members/:id/lockouts' element={
 								<AdminMemberCertifications result={result} refreshResult={refreshResult} {...props} />
-							</Route>}
+							} />}
 
-							{isAdmin(user) && <Route path='/members/:id/training'>
+							{isAdmin(user) && <Route path='/members/:id/training' element={
 								<AdminMemberTraining result={result} refreshResult={refreshResult} {...props} />
-							</Route>}
+							} />}
 
-							{isAdmin(user) && <Route path='/members/:id/transactions'>
+							{isAdmin(user) && <Route path='/members/:id/transactions' element={
 								<AdminMemberTransactions result={result} refreshResult={refreshResult} {...props} />
-							</Route>}
+							} />}
 
-							{isAdmin(user) && <Route path='/members/:id/history'>
+							{isAdmin(user) && <Route path='/members/:id/history' element={
 								<AdminHistory filterMember={member.id} {...props} />
-							</Route>}
+							} />}
 
-							{isAdmin(user) && <Route path='/members/:id/accounting'>
+							{isAdmin(user) && <Route path='/members/:id/accounting' element={
 								<AdminAccounting result={result} {...props} />
-							</Route>}
+							} />}
 
-							<Route path='/members/:id'>
+							<Route path='/members/:id' element={
 								<Grid stackable columns={2}>
 									<Grid.Column width={5}>
 										<p>
@@ -437,8 +437,8 @@ export function MemberDetail(props) {
 										}
 									</Grid.Column>
 								</Grid>
-							</Route>
-						</Switch>
+							} />
+						</Routes>
 					</div>
 				:
 					<p>Loading...</p>

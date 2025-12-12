@@ -6,6 +6,7 @@ from rest_framework.test import APIClient
 
 from apiserver.api import utils, utils_paypal, models
 
+
 class TestMonthsSpanned(TestCase):
     def test_num_months_spanned_one_month(self):
         date2 = datetime.date(2020, 1, 10)
@@ -130,7 +131,7 @@ class TestCalcStatus(TestCase):
 
         status = utils.calc_member_status(expire_date)
 
-        self.assertEqual(status, 'Current')
+        self.assertEqual(status, "Current")
 
     def test_calc_member_status_1_month(self):
         today = datetime.date(2019, 2, 10)
@@ -138,35 +139,35 @@ class TestCalcStatus(TestCase):
 
         status = utils.calc_member_status(expire_date, today)
 
-        self.assertEqual(status, 'Current')
+        self.assertEqual(status, "Current")
 
     def test_calc_member_status_90_days(self):
         expire_date = utils.today_alberta_tz() + datetime.timedelta(days=90)
 
         status = utils.calc_member_status(expire_date)
 
-        self.assertEqual(status, 'Prepaid')
+        self.assertEqual(status, "Prepaid")
 
     def test_calc_member_status_tomorrow(self):
         expire_date = utils.today_alberta_tz() + datetime.timedelta(days=1)
 
         status = utils.calc_member_status(expire_date)
 
-        self.assertEqual(status, 'Current')
+        self.assertEqual(status, "Current")
 
     def test_calc_member_status_today(self):
         expire_date = utils.today_alberta_tz()
 
         status = utils.calc_member_status(expire_date)
 
-        self.assertEqual(status, 'Due')
+        self.assertEqual(status, "Due")
 
     def test_calc_member_status_yesterday(self):
         expire_date = utils.today_alberta_tz() - datetime.timedelta(days=1)
 
         status = utils.calc_member_status(expire_date)
 
-        self.assertEqual(status, 'Due')
+        self.assertEqual(status, "Due")
 
     def test_calc_member_status_1_month_ago(self):
         today = datetime.date(2019, 4, 10)
@@ -174,30 +175,30 @@ class TestCalcStatus(TestCase):
 
         status = utils.calc_member_status(expire_date, today)
 
-        self.assertEqual(status, 'Overdue')
+        self.assertEqual(status, "Overdue")
 
     def test_calc_member_status_85_days_ago(self):
         expire_date = utils.today_alberta_tz() - datetime.timedelta(days=85)
 
         status = utils.calc_member_status(expire_date)
 
-        self.assertEqual(status, 'Overdue')
+        self.assertEqual(status, "Overdue")
 
     def test_calc_member_status_95_days_ago(self):
         expire_date = utils.today_alberta_tz() - datetime.timedelta(days=95)
 
         status = utils.calc_member_status(expire_date)
 
-        self.assertEqual(status, 'Former Member')
+        self.assertEqual(status, "Former Member")
 
 
 class TestTallyMembership(TestCase):
     def get_user(self):
         testing_user, _ = models.User.objects.get_or_create(
-            first_name='unittest',
-            username='unittest',
-            last_name='tester',
-            email='unittest@unittest.com'
+            first_name="unittest",
+            username="unittest",
+            last_name="tester",
+            email="unittest@unittest.com",
         )
         return testing_user
 
@@ -210,7 +211,7 @@ class TestTallyMembership(TestCase):
             last_name=testing_user.last_name,
             user=testing_user,
             paused_date=None,
-            expire_date=None
+            expire_date=None,
         )
 
         return member
@@ -218,7 +219,9 @@ class TestTallyMembership(TestCase):
     def test_tally_membership_months_prepaid(self):
         member = self.get_member_clear_transactions()
         test_num_months = 8
-        start_date = utils.today_alberta_tz() - relativedelta.relativedelta(months=6, days=14)
+        start_date = utils.today_alberta_tz() - relativedelta.relativedelta(
+            months=6, days=14
+        )
         end_date = start_date + relativedelta.relativedelta(months=test_num_months)
 
         member.current_start_date = start_date
@@ -235,12 +238,14 @@ class TestTallyMembership(TestCase):
         result = utils.tally_membership_months(member)
 
         self.assertEqual(member.expire_date, end_date)
-        self.assertEqual(member.status, 'Prepaid')
+        self.assertEqual(member.status, "Prepaid")
 
     def test_tally_membership_months_current(self):
         member = self.get_member_clear_transactions()
         test_num_months = 7
-        start_date = utils.today_alberta_tz() - relativedelta.relativedelta(months=6, days=14)
+        start_date = utils.today_alberta_tz() - relativedelta.relativedelta(
+            months=6, days=14
+        )
         end_date = start_date + relativedelta.relativedelta(months=test_num_months)
 
         member.current_start_date = start_date
@@ -257,12 +262,14 @@ class TestTallyMembership(TestCase):
         result = utils.tally_membership_months(member)
 
         self.assertEqual(member.expire_date, end_date)
-        self.assertEqual(member.status, 'Current')
+        self.assertEqual(member.status, "Current")
 
     def test_tally_membership_months_due(self):
         member = self.get_member_clear_transactions()
         test_num_months = 6
-        start_date = utils.today_alberta_tz() - relativedelta.relativedelta(months=6, days=14)
+        start_date = utils.today_alberta_tz() - relativedelta.relativedelta(
+            months=6, days=14
+        )
         end_date = start_date + relativedelta.relativedelta(months=test_num_months)
 
         member.current_start_date = start_date
@@ -279,12 +286,14 @@ class TestTallyMembership(TestCase):
         result = utils.tally_membership_months(member)
 
         self.assertEqual(member.expire_date, end_date)
-        self.assertEqual(member.status, 'Due')
+        self.assertEqual(member.status, "Due")
 
     def test_tally_membership_months_overdue(self):
         member = self.get_member_clear_transactions()
         test_num_months = 5
-        start_date = utils.today_alberta_tz() - relativedelta.relativedelta(months=6, days=14)
+        start_date = utils.today_alberta_tz() - relativedelta.relativedelta(
+            months=6, days=14
+        )
         end_date = start_date + relativedelta.relativedelta(months=test_num_months)
 
         member.current_start_date = start_date
@@ -301,12 +310,14 @@ class TestTallyMembership(TestCase):
         result = utils.tally_membership_months(member)
 
         self.assertEqual(member.expire_date, end_date)
-        self.assertEqual(member.status, 'Overdue')
+        self.assertEqual(member.status, "Overdue")
 
     def test_tally_membership_months_overdue_pause(self):
         member = self.get_member_clear_transactions()
         test_num_months = 1
-        start_date = utils.today_alberta_tz() - relativedelta.relativedelta(months=6, days=14)
+        start_date = utils.today_alberta_tz() - relativedelta.relativedelta(
+            months=6, days=14
+        )
         end_date = start_date + relativedelta.relativedelta(months=test_num_months)
 
         member.current_start_date = start_date
@@ -324,7 +335,7 @@ class TestTallyMembership(TestCase):
 
         self.assertEqual(member.expire_date, end_date)
         self.assertEqual(member.paused_date, end_date)
-        self.assertEqual(member.status, 'Former Member')
+        self.assertEqual(member.status, "Former Member")
 
     def test_tally_membership_months_dont_run(self):
         member = self.get_member_clear_transactions()
@@ -338,28 +349,29 @@ class TestTallyMembership(TestCase):
 
         self.assertEqual(result, False)
 
+
 class TestParsePayPalDate(TestCase):
     def test_parse(self):
-        string = '20:12:59 Jan 13, 2009 PST'
+        string = "20:12:59 Jan 13, 2009 PST"
 
         result = utils_paypal.parse_paypal_date(string)
 
-        self.assertEqual(str(result), '2009-01-14 04:12:59+00:00')
+        self.assertEqual(str(result), "2009-01-14 04:12:59+00:00")
 
     def test_parse_dst(self):
-        string = '20:12:59 Jul 13, 2009 PDT'
+        string = "20:12:59 Jul 13, 2009 PDT"
 
         result = utils_paypal.parse_paypal_date(string)
 
-        self.assertEqual(str(result), '2009-07-14 03:12:59+00:00')
+        self.assertEqual(str(result), "2009-07-14 03:12:59+00:00")
 
     def test_parse_bad_tz(self):
-        string = '20:12:59 Jul 13, 2009 QOT'
+        string = "20:12:59 Jul 13, 2009 QOT"
 
         self.assertRaises(ValidationError, utils_paypal.parse_paypal_date, string)
 
     def test_parse_bad_string(self):
-        string = 'ave satanas'
+        string = "ave satanas"
 
         self.assertRaises(ValidationError, utils_paypal.parse_paypal_date, string)
 
@@ -368,27 +380,29 @@ class RegistrationTest(TestCase):
     def test_registration_success(self):
         client = APIClient()
         data = {
-            'email': 'john@example.com',
-            'first_name': 'John',
-            'last_name': 'Doe',
-            'preferred_name': 'John',
-            'existing_member': 'false',
-            'password1': 'test123456',
-            'password2': 'test123456',
-            'ready_to_pay': 'true',
-            'username': 'john.doe',
-            'request_id': 'cevps1w1im',
+            "email": "john@example.com",
+            "first_name": "John",
+            "last_name": "Doe",
+            "preferred_name": "John",
+            "existing_member": "false",
+            "password1": "test123456",
+            "password2": "test123456",
+            "ready_to_pay": "true",
+            "username": "john.doe",
+            "request_id": "cevps1w1im",
         }
-        response = client.post('/registration/', data)
+        response = client.post("/registration/", data)
         self.assertEqual(response.status_code, 201)
 
         # Check user was created
-        self.assertTrue(models.User.objects.filter(username='john.doe').exists())
+        self.assertTrue(models.User.objects.filter(username="john.doe").exists())
 
         # Check member was created
-        self.assertTrue(models.Member.objects.filter(user__username='john.doe').exists())
+        self.assertTrue(
+            models.Member.objects.filter(user__username="john.doe").exists()
+        )
 
-        member = models.Member.objects.get(user__username='john.doe')
-        self.assertEqual(member.first_name, 'John')
-        self.assertEqual(member.last_name, 'Doe')
-        self.assertEqual(member.user.email, 'john@example.com')
+        member = models.Member.objects.get(user__username="john.doe")
+        self.assertEqual(member.first_name, "John")
+        self.assertEqual(member.last_name, "Doe")
+        self.assertEqual(member.user.email, "john@example.com")

@@ -1,31 +1,31 @@
 import logging
+
 logger = logging.getLogger(__name__)
 
 import datetime
 import json
 import requests
 from rest_framework.exceptions import ValidationError
-from uuid import uuid4
 
-from django.db.models import Sum
-from django.utils import timezone
+from zoneinfo import ZoneInfo
 from django.utils.timezone import now
 
-from . import models, serializers, utils
+from . import models, utils
 from .. import settings
 
 SANDBOX = False
 if SANDBOX:
-    VERIFY_URL = 'https://ipnpb.sandbox.paypal.com/cgi-bin/webscr'
-    OUR_EMAIL = 'seller@paypalsandbox.com'
-    OUR_CURRENCY = 'USD'
+    VERIFY_URL = "https://ipnpb.sandbox.paypal.com/cgi-bin/webscr"
+    OUR_EMAIL = "seller@paypalsandbox.com"
+    OUR_CURRENCY = "USD"
 else:
-    VERIFY_URL = 'https://ipnpb.paypal.com/cgi-bin/webscr'
-    OUR_EMAIL = 'paypal@protospace.ca'
-    OUR_CURRENCY = 'CAD'
+    VERIFY_URL = "https://ipnpb.paypal.com/cgi-bin/webscr"
+    OUR_EMAIL = "paypal@protospace.ca"
+    OUR_CURRENCY = "CAD"
+
 
 def parse_paypal_date(string):
-    '''
+    """
     Convert paypal date string into python datetime. PayPal's a bunch of idiots.
     Their API returns dates in some custom format, so we have to parse it.
 
@@ -33,119 +33,136 @@ def parse_paypal_date(string):
     https://github.com/spookylukey/django-paypal/blob/master/paypal/standard/forms.py
 
     Return the UTC python datetime.
-    '''
+    """
     MONTHS = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug',
-        'Sep', 'Oct', 'Nov', 'Dec',
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
     ]
 
-    if not string: return now()
+    if not string:
+        return now()
 
     value = string.strip()
     try:
         time_part, month_part, day_part, year_part, zone_part = value.split()
-        month_part = month_part.strip('.')
-        day_part = day_part.strip(',')
+        month_part = month_part.strip(".")
+        day_part = day_part.strip(",")
         month = MONTHS.index(month_part) + 1
         day = int(day_part)
         year = int(year_part)
-        hour, minute, second = map(int, time_part.split(':'))
+        hour, minute, second = map(int, time_part.split(":"))
         dt = datetime.datetime(year, month, day, hour, minute, second)
     except ValueError as e:
-        raise ValidationError('Invalid date format {} {}'.format(
-            value, str(e)
-        ))
+        raise ValidationError("Invalid date format {} {}".format(value, str(e)))
 
-    if zone_part in ['PDT', 'PST']:
+    if zone_part in ["PDT", "PST"]:
         # PST/PDT is 'US/Pacific' and ignored, localize only cares about date
-        dt = timezone.pytz.timezone('US/Pacific').localize(dt)
-        dt = dt.astimezone(timezone.pytz.UTC)
+        dt = dt = dt.replace(tzinfo=ZoneInfo("US/Pacific"))
+        dt = dt.astimezone(ZoneInfo("UTC"))
     else:
-        raise ValidationError('Bad timezone: ' + zone_part)
+        raise ValidationError("Bad timezone: " + zone_part)
     return dt
 
+
 def record_ipn(data):
-    '''
+    """
     Record each individual IPN (even dupes) for logging and debugging
-    '''
+    """
     return models.IPN.objects.create(
         data=data.urlencode(),
-        status='New',
+        status="New",
     )
+
 
 def update_ipn(ipn, status):
     ipn.status = status
     ipn.save()
+
 
 def verify_paypal_ipn(data):
     if settings.DEBUG:
         return True
 
     params = data.copy()
-    params['cmd'] = '_notify-validate'
+    params["cmd"] = "_notify-validate"
     headers = {
-        'content-type': 'application/x-www-form-urlencoded',
-        'user-agent': 'spaceport',
+        "content-type": "application/x-www-form-urlencoded",
+        "user-agent": "spaceport",
     }
 
     try:
         r = requests.post(VERIFY_URL, params=params, headers=headers, timeout=4)
         r.raise_for_status()
-        logger.info('Result: ' + r.text)
-        if r.text == 'VERIFIED':
+        logger.info("Result: " + r.text)
+        if r.text == "VERIFIED":
             return True
     except BaseException as e:
-        logger.error('IPN verify - {} - {}'.format(e.__class__.__name__, str(e)))
+        logger.error("IPN verify - {} - {}".format(e.__class__.__name__, str(e)))
 
-    logger.info('IPN - verification failed, retrying...')
+    logger.info("IPN - verification failed, retrying...")
 
     try:
         r = requests.post(VERIFY_URL, params=params, headers=headers, timeout=4)
         r.raise_for_status()
-        logger.info('Result: ' + r.text)
-        if r.text == 'VERIFIED':
+        logger.info("Result: " + r.text)
+        if r.text == "VERIFIED":
             return True
     except BaseException as e:
-        logger.error('IPN verify - {} - {}'.format(e.__class__.__name__, str(e)))
+        logger.error("IPN verify - {} - {}".format(e.__class__.__name__, str(e)))
 
-    utils.alert_tanner('IPN failed to verify:\n\n' + str(data.dict()))
+    utils.alert_tanner("IPN failed to verify:\n\n" + str(data.dict()))
 
     return False
 
+
 def build_tx(data):
-    amount = float(data.get('mc_gross', 0))
+    amount = float(data.get("mc_gross", 0))
     return dict(
-        account_type='PayPal',
+        account_type="PayPal",
         amount=amount,
-        date=parse_paypal_date(data.get('payment_date', '')),
-        info_source='PayPal IPN',
-        payment_method=data.get('payment_type', 'unknown'),
-        paypal_payer_id=data.get('payer_id', 'unknown'),
-        paypal_subscr_id=data.get('subscr_id', ''),  # only included in subscription payments
-        paypal_txn_id=data.get('txn_id', 'unknown'),
-        paypal_txn_type=data.get('txn_type', 'unknown'),
-        reference_number=data.get('txn_id', 'unknown'),
+        date=parse_paypal_date(data.get("payment_date", "")),
+        info_source="PayPal IPN",
+        payment_method=data.get("payment_type", "unknown"),
+        paypal_payer_id=data.get("payer_id", "unknown"),
+        paypal_subscr_id=data.get(
+            "subscr_id", ""
+        ),  # only included in subscription payments
+        paypal_txn_id=data.get("txn_id", "unknown"),
+        paypal_txn_type=data.get("txn_type", "unknown"),
+        reference_number=data.get("txn_id", "unknown"),
     )
+
 
 def create_unmatched_member_tx(data):
     transactions = models.Transaction.objects
 
-    report_memo = 'Cant link sender name, {} {}, email: {}, note: {} - {}'.format(
-        data.get('first_name', 'unknown'),
-        data.get('last_name', 'unknown'),
-        data.get('payer_email', 'unknown'),
-        data.get('custom', 'none'),
-        data.get('memo', 'none'),
+    report_memo = "Cant link sender name, {} {}, email: {}, note: {} - {}".format(
+        data.get("first_name", "unknown"),
+        data.get("last_name", "unknown"),
+        data.get("payer_email", "unknown"),
+        data.get("custom", "none"),
+        data.get("memo", "none"),
     )
 
     tx = transactions.create(
         **build_tx(data),
         report_memo=report_memo,
-        report_type='Unmatched Member',
+        report_type="Unmatched Member",
     )
 
     utils.log_transaction(tx)
     return tx
+
 
 def create_member_dues_tx(data, member, num_months, deal):
     transactions = models.Transaction.objects
@@ -153,28 +170,28 @@ def create_member_dues_tx(data, member, num_months, deal):
     # new member 3 for 2 will have to be manual anyway
     if deal == 12 and num_months == 11:
         num_months = 12
-        deal_str = '12 for 11, '
+        deal_str = "12 for 11, "
     elif deal == 3 and num_months == 2:
         num_months = 3
-        deal_str = '3 for 2, '
+        deal_str = "3 for 2, "
     elif num_months == 11:  # handle pre-Spaceport yearly subs
         num_months = 12
-        deal_str = '12 for 11 (legacy), '
+        deal_str = "12 for 11 (legacy), "
     else:
-        deal_str = ''
+        deal_str = ""
 
-    user = getattr(member, 'user', None)
-    memo = '{}{} {} - Protospace Membership, {}'.format(
+    user = getattr(member, "user", None)
+    memo = "{}{} {} - Protospace Membership, {}".format(
         deal_str,
-        data.get('first_name', 'unknown'),
-        data.get('last_name', 'unknown'),
-        data.get('payer_email', 'unknown'),
+        data.get("first_name", "unknown"),
+        data.get("last_name", "unknown"),
+        data.get("payer_email", "unknown"),
     )
 
     tx = transactions.create(
         **build_tx(data),
         memo=memo,
-        category='Membership',
+        category="Membership",
         number_of_membership_months=num_months,
         user=user,
     )
@@ -182,50 +199,53 @@ def create_member_dues_tx(data, member, num_months, deal):
     utils.log_transaction(tx)
     return tx
 
+
 def create_unmatched_purchase_tx(data, member):
     transactions = models.Transaction.objects
 
-    user = getattr(member, 'user', None)
-    report_memo = 'Unknown payment reason, {} {}, email: {}, note: {} - {}'.format(
-        data.get('first_name', 'unknown'),
-        data.get('last_name', 'unknown'),
-        data.get('payer_email', 'unknown'),
-        data.get('custom', 'none'),
-        data.get('memo', 'none'),
+    user = getattr(member, "user", None)
+    report_memo = "Unknown payment reason, {} {}, email: {}, note: {} - {}".format(
+        data.get("first_name", "unknown"),
+        data.get("last_name", "unknown"),
+        data.get("payer_email", "unknown"),
+        data.get("custom", "none"),
+        data.get("memo", "none"),
     )
 
     tx = transactions.create(
         **build_tx(data),
         report_memo=report_memo,
-        report_type='Unmatched Purchase',
+        report_type="Unmatched Purchase",
         user=user,
     )
 
     utils.log_transaction(tx)
     return tx
 
+
 def create_member_training_tx(data, member, training):
     transactions = models.Transaction.objects
 
-    user = getattr(member, 'user', None)
-    memo = '{} {} - {} Course, email: {}, session: {}, training: {}'.format(
-        data.get('first_name', 'unknown'),
-        data.get('last_name', 'unknown'),
+    user = getattr(member, "user", None)
+    memo = "{} {} - {} Course, email: {}, session: {}, training: {}".format(
+        data.get("first_name", "unknown"),
+        data.get("last_name", "unknown"),
         training.session.course.name,
-        data.get('payer_email', 'unknown'),
+        data.get("payer_email", "unknown"),
         str(training.session.id),
         str(training.id),
     )
 
     tx = transactions.create(
         **build_tx(data),
-        category='OnAcct',
+        category="OnAcct",
         memo=memo,
         user=user,
     )
 
     utils.log_transaction(tx)
     return tx
+
 
 def check_training(data, training_id, amount):
     trainings = models.Training.objects
@@ -235,7 +255,7 @@ def check_training(data, training_id, amount):
 
     training = trainings.get(id=training_id)
 
-    #if training.attendance_status != 'Waiting for payment':
+    # if training.attendance_status != 'Waiting for payment':
     #    return False
 
     if not training.session:
@@ -249,32 +269,33 @@ def check_training(data, training_id, amount):
 
     member = training.user.member
 
-    if training.attendance_status == 'Waiting for payment':
-        training.attendance_status = 'Confirmed'
+    if training.attendance_status == "Waiting for payment":
+        training.attendance_status = "Confirmed"
     training.paid_date = utils.today_alberta_tz()
     training.save()
 
-    logger.info('IPN - Amount valid for training cost, id: ' + str(training.id))
+    logger.info("IPN - Amount valid for training cost, id: " + str(training.id))
     return create_member_training_tx(data, member, training)
+
 
 def create_category_tx(data, member, custom_json, amount):
     transactions = models.Transaction.objects
 
-    user = getattr(member, 'user', None)
-    category = custom_json['category']
+    user = getattr(member, "user", None)
+    category = custom_json["category"]
 
-    if category == 'Exchange':
+    if category == "Exchange":
         protocoin = amount
-        note = '{} Protocoin Purchase'.format(amount)
+        note = "{} Protocoin Purchase".format(amount)
     else:
         protocoin = 0
-        note = custom_json.get('memo', 'none')
+        note = custom_json.get("memo", "none")
 
-    memo = '{} {} - {}, email: {}, note: {}'.format(
-        data.get('first_name', 'unknown'),
-        data.get('last_name', 'unknown'),
+    memo = "{} {} - {}, email: {}, note: {}".format(
+        data.get("first_name", "unknown"),
+        data.get("last_name", "unknown"),
         category,
-        data.get('payer_email', 'unknown'),
+        data.get("payer_email", "unknown"),
         note,
     )
 
@@ -291,66 +312,66 @@ def create_category_tx(data, member, custom_json, amount):
 
 
 def process_paypal_ipn(data):
-    '''
+    """
     Receive IPN from PayPal, then verify it. If it's good, try to associate it
     with a member. If the value is a multiple of member dues, credit that many
     months of membership. Ignore if payment incomplete or duplicate IPN.
 
     Blocks the IPN POST response, so keep it quick.
-    '''
+    """
     ipn = record_ipn(data)
 
     if verify_paypal_ipn(data):
-        logger.info('IPN - verified')
+        logger.info("IPN - verified")
     else:
-        logger.error('IPN - verification failed')
-        update_ipn(ipn, 'Verification Failed')
+        logger.error("IPN - verification failed")
+        update_ipn(ipn, "Verification Failed")
         return False
 
-    amount = float(data.get('mc_gross', '0'))
+    amount = float(data.get("mc_gross", "0"))
 
-    if data.get('payment_status', 'unknown') != 'Completed':
-        logger.info('IPN - Payment not yet completed, ignoring')
-        update_ipn(ipn, 'Payment Incomplete')
+    if data.get("payment_status", "unknown") != "Completed":
+        logger.info("IPN - Payment not yet completed, ignoring")
+        update_ipn(ipn, "Payment Incomplete")
         return False
 
-    if data.get('receiver_email', 'unknown') != OUR_EMAIL:
-        logger.info('IPN - Payment not for us, ignoring')
-        update_ipn(ipn, 'Invalid Receiver')
+    if data.get("receiver_email", "unknown") != OUR_EMAIL:
+        logger.info("IPN - Payment not for us, ignoring")
+        update_ipn(ipn, "Invalid Receiver")
         return False
 
-    if data.get('mc_currency', 'unknown') != OUR_CURRENCY:
-        logger.info('IPN - Payment currency invalid, ignoring')
-        update_ipn(ipn, 'Invalid Currency')
+    if data.get("mc_currency", "unknown") != OUR_CURRENCY:
+        logger.info("IPN - Payment currency invalid, ignoring")
+        update_ipn(ipn, "Invalid Currency")
         return False
 
     transactions = models.Transaction.objects
     members = models.Member.objects
     hints = models.PayPalHint.objects
 
-    if 'txn_id' not in data:
-        logger.info('IPN - Missing transaction ID, ignoring')
-        update_ipn(ipn, 'Missing ID')
+    if "txn_id" not in data:
+        logger.info("IPN - Missing transaction ID, ignoring")
+        update_ipn(ipn, "Missing ID")
         return False
 
     # TODO: index txn_id?
-    if transactions.filter(paypal_txn_id=data['txn_id']).exists():
-        logger.info('IPN - Duplicate transaction, ignoring')
-        update_ipn(ipn, 'Duplicate')
+    if transactions.filter(paypal_txn_id=data["txn_id"]).exists():
+        logger.info("IPN - Duplicate transaction, ignoring")
+        update_ipn(ipn, "Duplicate")
         return False
 
     try:
-        custom_json = json.loads(data.get('custom', '').replace('`', '"'))
+        custom_json = json.loads(data.get("custom", "").replace("`", '"'))
     except (KeyError, ValueError):
         custom_json = {}
 
-    if 'training' in custom_json:
-        tx = check_training(data, custom_json['training'], amount)
+    if "training" in custom_json:
+        tx = check_training(data, custom_json["training"], amount)
         if tx:
-            logger.info('IPN - Training matched, adding hint and returning')
-            update_ipn(ipn, 'Accepted, training')
+            logger.info("IPN - Training matched, adding hint and returning")
+            update_ipn(ipn, "Accepted, training")
             hints.update_or_create(
-                account=data.get('payer_id', 'unknown'),
+                account=data.get("payer_id", "unknown"),
                 defaults=dict(user=tx.user),
             )
             return tx
@@ -358,40 +379,46 @@ def process_paypal_ipn(data):
     user = False
 
     # trust custom json the most since it comes from webclient
-    if 'member' in custom_json:
+    if "member" in custom_json:
         try:
-            user = members.get(id=custom_json['member']).user
+            user = members.get(id=custom_json["member"]).user
         except models.Member.DoesNotExist:
-            logger.info('IPN - No member found for custom json %s', str(custom_json))
+            logger.info("IPN - No member found for custom json %s", str(custom_json))
 
-    if not user and 'subscr_id' in data:
+    if not user and "subscr_id" in data:
         try:
-            user = hints.get(account=data['subscr_id']).user
+            user = hints.get(account=data["subscr_id"]).user
         except models.PayPalHint.DoesNotExist:
-            logger.info('IPN - No PayPalHint found for subscr_id %s', data['subscr_id'])
+            logger.info("IPN - No PayPalHint found for subscr_id %s", data["subscr_id"])
 
     if not user:
         try:
-            user = hints.get(account=data['payer_id']).user
+            user = hints.get(account=data["payer_id"]).user
         except models.PayPalHint.DoesNotExist:
-            logger.info('IPN - No PayPalHint found for payer_id %s', data['payer_id'])
-
+            logger.info("IPN - No PayPalHint found for payer_id %s", data["payer_id"])
 
     if not user:
-        logger.info('IPN - Unable to associate with member, reporting')
-        update_ipn(ipn, 'Accepted, Unmatched Member')
+        logger.info("IPN - Unable to associate with member, reporting")
+        update_ipn(ipn, "Accepted, Unmatched Member")
         return create_unmatched_member_tx(data)
 
     member = user.member
 
     hints.update_or_create(
-        account=data.get('subscr_id', data['payer_id']),
+        account=data.get("subscr_id", data["payer_id"]),
         defaults=dict(user=user),
     )
 
-    if custom_json.get('category', False) in ['Snacks', 'OnAcct', 'Donation', 'Consumables', 'Purchases', 'Exchange']:
-        logger.info('IPN - Category matched')
-        update_ipn(ipn, 'Accepted, category')
+    if custom_json.get("category", False) in [
+        "Snacks",
+        "OnAcct",
+        "Donation",
+        "Consumables",
+        "Purchases",
+        "Exchange",
+    ]:
+        logger.info("IPN - Category matched")
+        update_ipn(ipn, "Accepted, category")
         return create_category_tx(data, member, custom_json, amount)
 
     monthly_fees = member.monthly_fees
@@ -402,11 +429,11 @@ def process_paypal_ipn(data):
         num_months = 0
 
     if num_months:
-        logger.info('IPN - Amount valid for membership dues, adding months')
-        update_ipn(ipn, 'Accepted, Member Dues')
-        deal = custom_json.get('deal', False)
+        logger.info("IPN - Amount valid for membership dues, adding months")
+        update_ipn(ipn, "Accepted, Member Dues")
+        deal = custom_json.get("deal", False)
         return create_member_dues_tx(data, member, num_months, deal)
 
-    logger.info('IPN - Unable to find a reason for payment, reporting')
-    update_ipn(ipn, 'Accepted, Unmatched Purchase')
+    logger.info("IPN - Unable to find a reason for payment, reporting")
+    update_ipn(ipn, "Accepted, Unmatched Purchase")
     return create_unmatched_purchase_tx(data, member)

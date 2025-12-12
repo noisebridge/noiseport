@@ -1,58 +1,60 @@
-import django, sys, os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'apiserver.settings'
+import django
+import os
+
+os.environ["DJANGO_SETTINGS_MODULE"] = "apiserver.settings"
 django.setup()
 
 from django.contrib.auth.models import User
 
-from apiserver.api import models, utils
+from apiserver.api import models
 from uuid import uuid4
 import re
 
-random_email = lambda: 'spaceport-' + str(uuid4()).split('-')[0] + '@protospace.ca'
+random_email = lambda: "spaceport-" + str(uuid4()).split("-")[0] + "@protospace.ca"
 
 members = models.Member.objects.all()
 
-print('Deleting duplicates...')
+print("Deleting duplicates...")
 
 for mid in [5203, 5257, 5261, 5277, 5278, 5299, 5307, 5310, 5240]:
     member = models.Member.objects.get(id=mid)
-    print('Deleting:', member.first_name, member.last_name)
+    print("Deleting:", member.first_name, member.last_name)
     member.delete()
 
 print()
-print('Generating Users')
+print("Generating Users")
 
 count = 0
 
 for member in members:
-    print('Member', member.id, member.first_name, member.last_name)
+    print("Member", member.id, member.first_name, member.last_name)
 
     if not member.user:
-        print('    No user, generating.')
+        print("    No user, generating.")
 
         if not member.first_name.isalpha():
-            print('    Non-alpha first name.')
+            print("    Non-alpha first name.")
 
         if not member.last_name.isalpha():
-            print('    Non-alpha last name.')
+            print("    Non-alpha last name.")
 
         first_name = member.first_name.strip().lower()
         last_name = member.last_name.strip().lower()
 
-        first_name = re.sub(r'[^a-z- ]+', '', first_name)
-        last_name = re.sub(r'[^a-z- ]+', '', last_name)
+        first_name = re.sub(r"[^a-z- ]+", "", first_name)
+        last_name = re.sub(r"[^a-z- ]+", "", last_name)
 
-        first_name = first_name.replace(' ', '.').replace('-', '.')
-        last_name = last_name.replace(' ', '.').replace('-', '.')
+        first_name = first_name.replace(" ", ".").replace("-", ".")
+        last_name = last_name.replace(" ", ".").replace("-", ".")
 
-        username = first_name + '.' + last_name
-        print('    Username:', username)
+        username = first_name + "." + last_name
+        print("    Username:", username)
 
         if member.old_email:
             email = member.old_email
         else:
             email = random_email()
-            print('    No email, using:', email)
+            print("    No email, using:", email)
 
         user = User.objects.create_user(username, email, str(uuid4()))
 
@@ -60,37 +62,36 @@ for member in members:
         member.save()
 
     x = models.Transaction.objects.filter(user=None, member_id=member.id)
-    print('    Linking', x.count(), 'transactions')
+    print("    Linking", x.count(), "transactions")
     x.update(user=member.user)
 
     x = models.Card.objects.filter(user=None, member_id=member.id)
-    print('    Linking', x.count(), 'cards')
+    print("    Linking", x.count(), "cards")
     x.update(user=member.user)
 
     x = models.Training.objects.filter(user=None, member_id=member.id)
-    print('    Linking', x.count(), 'trainings')
+    print("    Linking", x.count(), "trainings")
     x.update(user=member.user)
 
     x = models.PayPalHint.objects.filter(user=None, member_id=member.id)
-    print('    Linking', x.count(), 'paypal hints')
+    print("    Linking", x.count(), "paypal hints")
     x.update(user=member.user)
-
 
     count += 1
     print()
 
-print('Processed', count, 'members.')
+print("Processed", count, "members.")
 
-print('Deleting orphan cards...')
+print("Deleting orphan cards...")
 count = models.Card.objects.filter(user__isnull=True).delete()[0]
-print('Deleted', count, 'cards.')
+print("Deleted", count, "cards.")
 
-print('Deleting orphan trainings...')
+print("Deleting orphan trainings...")
 count = models.Training.objects.filter(user__isnull=True).delete()[0]
-print('Deleted', count, 'trainings.')
+print("Deleted", count, "trainings.")
 
-print('Deleting orphan hints...')
+print("Deleting orphan hints...")
 count = models.PayPalHint.objects.filter(user__isnull=True).delete()[0]
-print('Deleted', count, 'hints.')
+print("Deleted", count, "hints.")
 
-print('Done.')
+print("Done.")

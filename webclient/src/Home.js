@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useReducer } from 'react';
-import { Link, useParams, useHistory } from 'react-router-dom';
-import moment from 'moment-timezone';
+import { Link, useParams } from 'react-router-dom';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import QRCode from 'react-qr-code';
 import './light.css';
 import { Button, Container, Divider, Grid, Header, Icon, Image, Message, Popup, Segment, Table } from 'semantic-ui-react';
@@ -11,16 +15,20 @@ import { VestaboardForm, SignForm } from './Sign.js';
 import { StorageButton } from './Storage.js';
 import { PayPalSubscribeDeal } from './PayPal.js';
 
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(localizedFormat);
+dayjs.extend(relativeTime);
+
 function MemberInfo(props) {
 	const user = props.user;
 	const member = user.member;
-	const history = useHistory();
 
 	const lastTrans = user.transactions?.slice(0,3);
 	const lastTrain = user.training?.sort((a, b) => a.session.datetime < b.session.datetime ? 1 : -1).slice(0,3);
 	const lastCard = user.cards?.filter(x => x.last_seen).sort((a, b) => a.last_seen < b.last_seen ? 1 : -1)[0];
 
-	const weekAgo = moment().subtract(1, 'weeks').toISOString();
+	const weekAgo = dayjs().subtract(1, 'weeks').toISOString();
 	const unpaidTraining = user.training?.filter(x => x.attendance_status === 'Waiting for payment' && x.session.datetime > weekAgo);
 
 	return (
@@ -58,7 +66,7 @@ function MemberInfo(props) {
 							</Table.Row>
 							<Table.Row>
 								<Table.Cell>Paid until:</Table.Cell>
-								<Table.Cell>{member.expire_date ? moment(member.expire_date).format('ll') : 'Unknown'}</Table.Cell>
+								<Table.Cell>{member.expire_date ? dayjs(member.expire_date).format('ll') : 'Unknown'}</Table.Cell>
 							</Table.Row>
 							<Table.Row>
 								<Table.Cell>Protocoin:</Table.Cell>
@@ -119,7 +127,7 @@ function MemberInfo(props) {
 						lastTrain.map(x =>
 							<Table.Row key={x.id}>
 								<Table.Cell style={{ minWidth: '8rem' }}>
-									<Link to={'/classes/'+x.session.id}>{moment(x.session.datetime).tz('America/Edmonton').format('ll')}</Link>
+									<Link to={'/classes/'+x.session.id}>{dayjs(x.session.datetime).tz('America/Edmonton').format('ll')}</Link>
 								</Table.Cell>
 								<Table.Cell>{x.session.course_data.name}</Table.Cell>
 							</Table.Row>
@@ -142,7 +150,7 @@ function MemberInfo(props) {
 						lastTrans.map(x =>
 							<Table.Row key={x.id}>
 								<Table.Cell style={{ minWidth: '8rem' }}>
-									<Link to={'/transactions/'+x.id}>{moment(x.date).format('ll')}</Link>
+									<Link to={'/transactions/'+x.id}>{dayjs(x.date).format('ll')}</Link>
 								</Table.Cell>
 								<Table.Cell>{x.account_type}</Table.Cell>
 								<Table.Cell>{x.protocoin !== '0.00' ? '₱ ' + x.protocoin : '$ ' + x.amount}</Table.Cell>
@@ -164,15 +172,15 @@ function MemberInfo(props) {
 				<Table.Body>
 					<Table.Row>
 						<Table.Cell>Application:</Table.Cell>
-						<Table.Cell>{member.application_date ? moment(member.application_date).format('ll') : 'Unknown'}</Table.Cell>
+						<Table.Cell>{member.application_date ? dayjs(member.application_date).format('ll') : 'Unknown'}</Table.Cell>
 					</Table.Row>
 					<Table.Row>
 						<Table.Cell>Start:</Table.Cell>
-						<Table.Cell>{member.current_start_date ? moment(member.current_start_date).format('ll') : 'Unknown'}</Table.Cell>
+						<Table.Cell>{member.current_start_date ? dayjs(member.current_start_date).format('ll') : 'Unknown'}</Table.Cell>
 					</Table.Row>
 					<Table.Row>
 						<Table.Cell>Vetted:</Table.Cell>
-						<Table.Cell>{member.vetted_date ? moment(member.vetted_date).format('ll') : 'Not vetted'}</Table.Cell>
+						<Table.Cell>{member.vetted_date ? dayjs(member.vetted_date).format('ll') : 'Not vetted'}</Table.Cell>
 					</Table.Row>
 					<Table.Row>
 						<Table.Cell>Monthly dues:</Table.Cell>
@@ -183,9 +191,9 @@ function MemberInfo(props) {
 						<Table.Cell>
 							{lastCard && lastCard.last_seen ?
 								lastCard.last_seen > '2021-11-14T02:01:35.415685Z' ?
-									moment.utc(lastCard.last_seen).tz('America/Edmonton').format('lll')
+									dayjs.utc(lastCard.last_seen).tz('America/Edmonton').format('lll')
 								:
-									moment.utc(lastCard.last_seen).tz('America/Edmonton').format('ll')
+									dayjs.utc(lastCard.last_seen).tz('America/Edmonton').format('ll')
 							:
 								'Unknown'
 							}
@@ -233,13 +241,13 @@ export function Home(props) {
 
 	const getStat = (x) => stats && stats[x] ? stats[x] : 'Unknown';
 	const getZeroStat = (x) => stats && stats[x] ? stats[x] : '0';
-	const getDateStat = (x) => stats && stats[x] ? moment.utc(stats[x]).tz('America/Edmonton').format('MMM Do @ LT') : 'Unknown';
-	const showMeetingLink = () => stats && stats['next_meeting'] && moment().add(30, 'minutes').isAfter(moment.utc(stats['next_meeting']));
+	const getDateStat = (x) => stats && stats[x] ? dayjs.utc(stats[x]).tz('America/Edmonton').format('MMM Do @ LT') : 'Unknown';
+	const showMeetingLink = () => stats && stats['next_meeting'] && dayjs().add(30, 'minutes').isAfter(dayjs.utc(stats['next_meeting']));
 
 	const getNextStat = (x) => {
 		if (stats && stats[x]) {
-			const datetime = moment.utc(stats[x].datetime).tz('America/Edmonton');
-			if (datetime.isSame(moment().tz('America/Edmonton'), 'day') ) {
+			const datetime = dayjs.utc(stats[x].datetime).tz('America/Edmonton');
+			if (datetime.isSame(dayjs().tz('America/Edmonton'), 'day') ) {
 				return <>{datetime.format('LT')} | <Link to={'/classes/' + stats[x].id}>{stats[x].name}</Link></>;
 			} else {
 				return <>{datetime.format('MMM Do')} | <Link to={'/classes/' + stats[x].id}>{stats[x].name}</Link></>;
@@ -252,21 +260,21 @@ export function Home(props) {
 	const mcPlayers = stats && stats['minecraft_players'] ? stats['minecraft_players'] : [];
 	const mumbleUsers = stats && stats['mumble_users'] ? stats['mumble_users'] : [];
 
-	const getTrackStat = (x) => stats && stats.track && stats.track[x] ? moment().unix() - stats.track[x]['time'] > 60 ? 'Free' : 'In Use' : 'Unknown';
-	const getTrackLast = (x) => stats && stats.track && stats.track[x] ? moment.unix(stats.track[x]['time']).tz('America/Edmonton').format('llll') : 'Unknown';
-	const getTrackAgo = (x) => stats && stats.track && stats.track[x] ? moment.unix(stats.track[x]['time']).tz('America/Edmonton').fromNow() : '';
+	const getTrackStat = (x) => stats && stats.track && stats.track[x] ? dayjs().unix() - stats.track[x]['time'] > 60 ? 'Free' : 'In Use' : 'Unknown';
+	const getTrackLast = (x) => stats && stats.track && stats.track[x] ? dayjs.unix(stats.track[x]['time']).tz('America/Edmonton').format('llll') : 'Unknown';
+	const getTrackAgo = (x) => stats && stats.track && stats.track[x] ? dayjs.unix(stats.track[x]['time']).tz('America/Edmonton').fromNow() : '';
 	const getTrackName = (x) => stats && stats.track && stats.track[x] && stats.track[x]['first_name'] ? stats.track[x]['first_name'] : 'Unknown';
 
 	const getScannerStat = (name) => stats?.scanner3d?.[name]?.status || 'Unknown';
-	const getScannerLast = (name) => stats?.scanner3d?.[name] ? moment.unix(stats.scanner3d[name]['time']).tz('America/Edmonton').format('llll') : 'Unknown';
-	const getScannerAgo = (name) => stats?.scanner3d?.[name] ? moment.unix(stats.scanner3d[name]['time']).tz('America/Edmonton').fromNow() : '';
+	const getScannerLast = (name) => stats?.scanner3d?.[name] ? dayjs.unix(stats.scanner3d[name]['time']).tz('America/Edmonton').format('llll') : 'Unknown';
+	const getScannerAgo = (name) => stats?.scanner3d?.[name] ? dayjs.unix(stats.scanner3d[name]['time']).tz('America/Edmonton').fromNow() : '';
 	const getScannerName = (name) => stats?.scanner3d?.[name]?.['first_name'] ? stats.scanner3d[name]['first_name'] : 'Unknown';
 
-	const alarmStat = (x) => stats && stats.alarm && moment().unix() - stats.alarm.time < 60*60*24 ? stats.alarm.data : 'Unknown';
-	const alarmUpdateLast = (x) => stats && stats.alarm ? moment.unix(stats.alarm.time).tz('America/Edmonton').format('llll') : 'Unknown';
-	const alarmUpdateAgo = (x) => stats && stats.alarm ? moment.unix(stats.alarm.time).tz('America/Edmonton').fromNow() : 'Unknown';
+	const alarmStat = (x) => stats && stats.alarm && dayjs().unix() - stats.alarm.time < 60*60*24 ? stats.alarm.data : 'Unknown';
+	const alarmUpdateLast = (x) => stats && stats.alarm ? dayjs.unix(stats.alarm.time).tz('America/Edmonton').format('llll') : 'Unknown';
+	const alarmUpdateAgo = (x) => stats && stats.alarm ? dayjs.unix(stats.alarm.time).tz('America/Edmonton').fromNow() : 'Unknown';
 
-	const closedStat = (x) => stats && stats.closing ? moment().unix() > stats.closing['time'] ? 'No host' : 'Open until ' + stats.closing['time_str'] + ' with ' + stats.closing['first_name'] : 'Unknown';
+	const closedStat = (x) => stats && stats.closing ? dayjs().unix() > stats.closing['time'] ? 'No host' : 'Open until ' + stats.closing['time_str'] + ' with ' + stats.closing['first_name'] : 'Unknown';
 
 	const p1sPrinter3dStat = (x) => {
 		const data = stats?.printer3d?.[x];
@@ -468,7 +476,7 @@ export function Home(props) {
 										<React.Fragment>
 											<p>
 												Live rooftop solar production amounts:<br /><br />
-												{Object.entries(stats.solar.users).map(([user, data]) => <>{user}: {data.power.toLocaleString()} W {moment().unix() - data.time > 1800 ? 'Error?' : ''}<br/></>)}
+												{Object.entries(stats.solar.users).map(([user, data]) => <>{user}: {data.power.toLocaleString()} W {dayjs().unix() - data.time > 1800 ? 'Error?' : ''}<br/></>)}
 											</p>
 										</React.Fragment>
 									} trigger={<a>[more]</a>} />
@@ -505,7 +513,7 @@ export function Home(props) {
 								<p>Protogarden:</p>
 
 								<Link to='/garden'>
-									<Image src={staticUrl + '/garden-medium.jpg?' + moment().unix()} />
+									<Image src={staticUrl + '/garden-medium.jpg?' + dayjs().unix()} />
 								</Link>
 							</>}
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation, useHistory } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import './light.css';
 import { Form, Header, Message } from 'semantic-ui-react';
 import { requester, randomString, siteUrl } from './utils.js';
@@ -11,7 +11,7 @@ export function LoginForm(props) {
 	const qs = useLocation().search;
 	const params = new URLSearchParams(qs);
 	const next = params.get('next') || false;
-	const history = useHistory();
+	const navigate = useNavigate();
 
 	const handleValues = (e, v) => setInput({ ...input, [v.name]: v.value });
 	const handleChange = (e) => handleValues(e, e.currentTarget);
@@ -28,7 +28,7 @@ export function LoginForm(props) {
 				setError({});
 				props.setTokenCache(res.key);
 				if (next) {
-					history.push(next);
+					navigate(next);
 				} else {
 					window.scrollTo(0, 0);
 				}

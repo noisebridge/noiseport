@@ -1,13 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import ReactToPrint from 'react-to-print';
-import * as Datetime from 'react-datetime';
+import Datetime from 'react-datetime';
 import 'react-datetime/css/react-datetime.css';
-import moment from 'moment-timezone';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
 import './light.css';
 import { Button, Checkbox, Form, Grid, Header, Icon, Label, Message, Table } from 'semantic-ui-react';
 import { requester, randomString } from './utils.js';
 import { MembersDropdown } from './Members.js';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(localizedFormat);
 
 class AttendanceSheet extends React.Component {
 	render() {
@@ -18,7 +25,7 @@ class AttendanceSheet extends React.Component {
 			<div style={{ padding: '3rem', background: 'white', width: '100%', height: '100%' }}>
 				<Header size='medium'>{clazz.course_data.name} Attendance</Header>
 				<p>
-					{moment.utc(clazz.datetime).tz('America/Edmonton').format('llll')}
+					{dayjs.utc(clazz.datetime).tz('America/Edmonton').format('llll')}
 					{num >= 2 ? ', '+num+' students sorted by registration time.' : '.'}
 				</p>
 
@@ -347,9 +354,9 @@ function InstructorClassEditor(props) {
 				<Datetime
 					timeConstraints={{ minutes: { step: 15 } }}
 					value={ input.datetime ?
-						moment.utc(input.datetime).tz('America/Edmonton')
+						dayjs.utc(input.datetime).tz('America/Edmonton').toDate()
 					:
-						moment().tz('America/Edmonton').set({ minute: 0 })
+						dayjs().tz('America/Edmonton').set('minute', 0).toDate()
 					}
 					onChange={handleDatetime}
 					input={false}
@@ -487,7 +494,7 @@ export function InstructorClassList(props) {
 
 	useEffect(() => {
 		setSameClasses(classes.filter(x =>
-			moment.utc(x.datetime).tz('America/Edmonton').isSame(input.datetime, 'day')
+			dayjs.utc(x.datetime).tz('America/Edmonton').isSame(dayjs.utc(input.datetime).tz('America/Edmonton'), 'day')
 		).sort((a, b) => a.datetime > b.datetime ? 1 : -1));
 	}, [input.datetime]);
 
@@ -533,7 +540,7 @@ export function InstructorClassList(props) {
 								{sameClasses.length ?
 									sameClasses.map(x =>
 										<p>
-											{moment.utc(x.datetime).tz('America/Edmonton').format('LT')} — {x.course_data.name}
+											{dayjs.utc(x.datetime).tz('America/Edmonton').format('LT')} — {x.course_data.name}
 										</p>
 									)
 								:

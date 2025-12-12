@@ -2,9 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import './light.css';
 import { Button, Checkbox, Dimmer, Form, Message, Header, Icon, Image, Segment, Table, List, ListItem } from 'semantic-ui-react';
-import moment from 'moment-timezone';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
 import { statusColor, BasicTable, staticUrl, requester } from './utils.js';
 import { TrainingList } from './Training.js';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(localizedFormat);
 
 function AdminCardDetail(props) {
 	const { token, result, card } = props;
@@ -75,9 +82,9 @@ function AdminCardDetail(props) {
 				Last Seen:{' '}
 				{input.last_seen ?
 					input.last_seen > '2021-11-14T02:01:35.415685Z' ?
-						moment.utc(input.last_seen).tz('America/Edmonton').format('lll')
+						dayjs.utc(input.last_seen).tz('America/Edmonton').format('lll')
 					:
-						moment.utc(input.last_seen).tz('America/Edmonton').format('ll')
+						dayjs.utc(input.last_seen).tz('America/Edmonton').format('ll')
 				:
 					'Unknown'
 				}
@@ -334,7 +341,7 @@ export function AdminMemberPause(props) {
 
 			<div>
 				{result.member.paused_date ?
-					result.member.vetted_date && moment().diff(moment(result.member.paused_date), 'days') > 370 ?
+					result.member.vetted_date && dayjs().diff(dayjs(result.member.paused_date), 'days') > 370 ?
 						<>
 							<p>
 								{result.member.preferred_name} has been away for more than a year and will need to be re-vetted according to our
@@ -669,7 +676,7 @@ export function AdminCert(props) {
 		if (loading) return;
 		setLoading(true);
 		let data = Object();
-		data[field] = moment.utc().tz('America/Edmonton').format('YYYY-MM-DD');
+		data[field] = dayjs.utc().tz('America/Edmonton').format('YYYY-MM-DD');
 		requester('/members/' + member.id + '/', 'PATCH', token, data)
 		.then(res => {
 			refreshResult();
@@ -818,16 +825,16 @@ export function AdminAccounting(props) {
 	const paused_transactions = member.paused_date && result.transactions.filter(x => x.number_of_membership_months && x.date >= member.paused_date);
 	const explain_fake = transactions.some(x => x.category === 'Memberships:Fake Months');
 	const total = transactions.reduce((accum, x) => accum + x.number_of_membership_months, 0);
-	const delta = Math.ceil(moment(member.expire_date).diff(moment(), 'days', true));
+	const delta = Math.ceil(dayjs(member.expire_date).diff(dayjs(), 'days', true));
 
 	return (
 		<div>
 			<Header size='medium'>Membership Accounting</Header>
 
-			<p>Current start date: {moment(member.current_start_date).format('ll')}</p>
+			<p>Current start date: {dayjs(member.current_start_date).format('ll')}</p>
 
 			{!!member.current_start_date && <>
-				<p>Member dues transactions filtered since {moment(member.current_start_date).format('ll')}:</p>
+				<p>Member dues transactions filtered since {dayjs(member.current_start_date).format('ll')}:</p>
 
 				<Table collapsing unstackable basic='very'>
 					<Table.Header>
@@ -843,7 +850,7 @@ export function AdminAccounting(props) {
 							transactions.map(x =>
 								<Table.Row key={x.id}>
 									<Table.Cell style={{ minWidth: '8rem' }}>
-										<Link to={'/transactions/'+x.id}>{moment(x.date).format('ll')}</Link>
+										<Link to={'/transactions/'+x.id}>{dayjs(x.date).format('ll')}</Link>
 									</Table.Cell>
 
 									<Table.Cell style={{ minWidth: '6rem' }}>{x.protocoin !== '0.00' ? '₱ ' + x.protocoin : '$ ' + x.amount} {x.category === 'Memberships:Fake Months' && '*'}</Table.Cell>
@@ -870,13 +877,13 @@ export function AdminAccounting(props) {
 					</>
 				:
 					<>
-						<p>{moment(member.current_start_date).format('ll')} + {total} months = {moment(member.expire_date).format('ll')}</p>
+						<p>{dayjs(member.current_start_date).format('ll')} + {total} months = {dayjs(member.expire_date).format('ll')}</p>
 
-						<p>Expire date: {moment(member.expire_date).format('ll')}</p>
+						<p>Expire date: {dayjs(member.expire_date).format('ll')}</p>
 
-						<p>Today's date: {moment().format('ll')}</p>
+						<p>Today's date: {dayjs().format('ll')}</p>
 
-						<p>{moment(member.expire_date).format('ll')} - {moment().format('ll')} = {delta} day{Math.abs(delta) === 1 ? '' : 's'}</p>
+						<p>{dayjs(member.expire_date).format('ll')} - {dayjs().format('ll')} = {delta} day{Math.abs(delta) === 1 ? '' : 's'}</p>
 
 						<Table collapsing unstackable basic='very'>
 							<Table.Header>

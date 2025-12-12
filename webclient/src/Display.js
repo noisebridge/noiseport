@@ -1,10 +1,19 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import moment from 'moment-timezone';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import { Button, Container, Header, Icon } from 'semantic-ui-react';
 import { requester } from './utils.js';
 import { TrotecUsage } from './Usage.js';
 import QRCode from 'react-qr-code';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(localizedFormat);
+dayjs.extend(isSameOrAfter);
 
 const deviceNames = {
 	'trotec': {title: 'Trotec', device: 'TROTECS300'},
@@ -157,7 +166,7 @@ export function DisplayUsage(props) {
 		return () => clearInterval(interval);
 	}, []);
 
-	const inUse = usage && moment().unix() - usage.track.time <= 60;
+	const inUse = usage && dayjs().unix() - usage.track.time <= 60;
 	const showUsage = usage && inUse && usage.username.startsWith(usage.track.username);
 
 	return (
@@ -376,8 +385,8 @@ export function DisplayClasses(props) {
 
 	const now = new Date().toISOString();
 
-	const isTodayOrFuture = (x) => moment.utc(x.datetime).tz('America/Edmonton') > moment().tz('America/Edmonton').startOf('day');
-	const isToday = (x) => moment().tz('America/Edmonton').isSame(moment.utc(x.datetime).tz('America/Edmonton'), 'day');
+	const isTodayOrFuture = (x) => dayjs.utc(x.datetime).tz('America/Edmonton') > dayjs().tz('America/Edmonton').startOf('day');
+	const isToday = (x) => dayjs().tz('America/Edmonton').isSame(dayjs.utc(x.datetime).tz('America/Edmonton'), 'day');
 
 	return (
 		<>
@@ -388,9 +397,9 @@ export function DisplayClasses(props) {
 					<Header size='medium'>{x.course_data.name}</Header>
 					<p>
 						{isToday(x) ?
-							'Today' + moment.utc(x.datetime).tz('America/Edmonton').format(' @ LT')
+							'Today' + dayjs.utc(x.datetime).tz('America/Edmonton').format(' @ LT')
 						:
-							moment.utc(x.datetime).tz('America/Edmonton').format('ddd, ll @ LT')
+							dayjs.utc(x.datetime).tz('America/Edmonton').format('ddd, ll @ LT')
 						}
 
 					</p>

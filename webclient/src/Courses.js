@@ -2,11 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import './light.css';
 import { Button, Label, Container, Header, Input, Segment, Table } from 'semantic-ui-react';
-import moment from 'moment-timezone';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
 import { isInstructor, getInstructor, requester, useIsMobile } from './utils.js';
 import { NotFound } from './Misc.js';
 import { InstructorCourseList, InstructorCourseDetail } from './InstructorCourses.js';
 import { InstructorClassList } from './InstructorClasses.js';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(localizedFormat);
 
 export const tags = {
 	Protospace: 'black',
@@ -288,10 +295,10 @@ export function CourseDetail(props) {
 										<Table.Row key={x.id} active={x.datetime < now || x.is_cancelled}>
 											<Table.Cell>
 												<Link to={'/classes/'+x.id}>
-													{!isMobile && <span>&nbsp;</span>}{moment.utc(x.datetime).tz('America/Edmonton').format('ll')}
+													{!isMobile && <span>&nbsp;</span>}{dayjs.utc(x.datetime).tz('America/Edmonton').format('ll')}
 												</Link>
 											</Table.Cell>
-											<Table.Cell>{isMobile && 'Time: '}{x.is_cancelled ? 'Cancelled' : moment.utc(x.datetime).tz('America/Edmonton').format('LT')}</Table.Cell>
+											<Table.Cell>{isMobile && 'Time: '}{x.is_cancelled ? 'Cancelled' : dayjs.utc(x.datetime).tz('America/Edmonton').format('LT')}</Table.Cell>
 											<Table.Cell>{isMobile && 'Instructor: '}{getInstructor(x)}</Table.Cell>
 											<Table.Cell>{isMobile && 'Cost: '}{x.cost === '0.00' ? 'Free' : '$'+x.cost}</Table.Cell>
 											<Table.Cell>

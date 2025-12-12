@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './light.css';
 import { Container, Checkbox, Form, Header, Segment, Table } from 'semantic-ui-react';
-import * as Datetime from 'react-datetime';
+import Datetime from 'react-datetime';
 import 'react-datetime/css/react-datetime.css';
-import moment from 'moment';
+import dayjs from 'dayjs';
 import { requester, useIsMobile } from './utils.js';
 import { TransactionList, TransactionEditor } from './Transactions.js';
 
@@ -46,7 +46,7 @@ let summaryCache = false;
 
 export function AdminHistoricalTransactions(props) {
 	const { token } = props;
-	const [input, setInput] = useState({ month: moment() });
+	const [input, setInput] = useState({ month: dayjs() });
 	const [transactions, setTransactions] = useState(transactionsCache);
 	const [summary, setSummary] = useState(summaryCache);
 	const [excludePayPal, setExcludePayPal] = useState(false);
@@ -163,7 +163,7 @@ export function AdminHistoricalTransactions(props) {
 			{!error ?
 				transactions && <div>
 					{!!transactions.length &&
-						<Header size='small'>{moment(transactions[0].date, 'YYYY-MM-DD').format('MMMM YYYY')} Transactions</Header>
+						<Header size='small'>{dayjs(transactions[0].date, 'YYYY-MM-DD').format('MMMM YYYY')} Transactions</Header>
 					}
 
 					<Checkbox
@@ -198,7 +198,7 @@ export function AdminHistoricalTransactions(props) {
 
 export function AdminAddTransaction(props) {
 	const { token } = props;
-	const [input, setInput] = useState({ date: moment().format('YYYY-MM-DD'), info_source: 'Web' });
+	const [input, setInput] = useState({ date: dayjs().format('YYYY-MM-DD'), info_source: 'Web' });
 	const [error, setError] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [success, setSuccess] = useState(false);

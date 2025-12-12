@@ -1,12 +1,13 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.utils.timezone import now
-from apiserver.api import models, utils, utils_stats, utils_email
-from datetime import datetime, timedelta
+from apiserver.api import models, utils, utils_stats
+from datetime import timedelta
 
 import time
 
+
 class Command(BaseCommand):
-    help = 'Tasks to run on the portal hourly.'
+    help = "Tasks to run on the portal hourly."
 
     def generate_stats(self):
         utils_stats.calc_next_events()
@@ -17,11 +18,11 @@ class Command(BaseCommand):
         models.StatsMemberCount.objects.update_or_create(
             date=utils.today_alberta_tz(),
             defaults=dict(
-                member_count=counts['member_count'],
-                green_count=counts['green_count'],
-                six_month_plus_count=counts['six_month_plus_count'],
-                vetted_count=counts['vetted_count'],
-                subscriber_count=counts['subscriber_count'],
+                member_count=counts["member_count"],
+                green_count=counts["green_count"],
+                six_month_plus_count=counts["six_month_plus_count"],
+                vetted_count=counts["vetted_count"],
+                subscriber_count=counts["subscriber_count"],
             ),
         )
 
@@ -54,42 +55,52 @@ class Command(BaseCommand):
         )
 
         if reminder_sessions.count() == 0:
-            self.stdout.write('No classes found within timeframe, returning')
+            self.stdout.write("No classes found within timeframe, returning")
             return 0
 
-        self.stdout.write('Found {} reminder sessions between {} and {} mountain time.'.format(
-            reminder_sessions.count(),
-            str(in_six_hours),
-            str(in_seven_hours),
-        ))
+        self.stdout.write(
+            "Found {} reminder sessions between {} and {} mountain time.".format(
+                reminder_sessions.count(),
+                str(in_six_hours),
+                str(in_seven_hours),
+            )
+        )
 
         for session in reminder_sessions:
-            self.stdout.write('Session {} instructor {}:'.format(
-                str(session),
-                session.instructor.username,
-            ))
+            self.stdout.write(
+                "Session {} instructor {}:".format(
+                    str(session),
+                    session.instructor.username,
+                )
+            )
 
             if session.is_cancelled:
-                self.stdout.write('    Is cancelled, skipping.')
+                self.stdout.write("    Is cancelled, skipping.")
                 continue
 
             if session.course.id in [317, 273, 413]:
-                self.stdout.write('    Is members meeting or cleanup, skipping.')
+                self.stdout.write("    Is members meeting or cleanup, skipping.")
                 continue
 
-            if 'Event' in session.course.tags or 'Outing' in session.course.tags:
-                self.stdout.write('    Is partially outing or event, skipping.')
+            if "Event" in session.course.tags or "Outing" in session.course.tags:
+                self.stdout.write("    Is partially outing or event, skipping.")
                 continue
 
-            self.stdout.write('    Emailing {} {}:'.format(session.instructor.username, session.instructor.email))
+            self.stdout.write(
+                "    Emailing {} {}:".format(
+                    session.instructor.username, session.instructor.email
+                )
+            )
 
-            utils.alert_tanner('Class reminder {} for {} {}'.format(
-                str(session),
-                session.instructor.username,
-                session.instructor.email,
-            ))
+            utils.alert_tanner(
+                "Class reminder {} for {} {}".format(
+                    str(session),
+                    session.instructor.username,
+                    session.instructor.email,
+                )
+            )
 
-            self.stdout.write('    Sent class reminder email.')
+            self.stdout.write("    Sent class reminder email.")
 
             count += 1
 
@@ -113,69 +124,78 @@ class Command(BaseCommand):
         )
 
         if reminder_sessions.count() == 0:
-            self.stdout.write('No classes found within timeframe, returning')
+            self.stdout.write("No classes found within timeframe, returning")
             return 0
 
-        self.stdout.write('Found {} sessions between {} and {} mountain time.'.format(
-            reminder_sessions.count(),
-            str(seven_hours_ago),
-            str(six_hours_ago),
-        ))
+        self.stdout.write(
+            "Found {} sessions between {} and {} mountain time.".format(
+                reminder_sessions.count(),
+                str(seven_hours_ago),
+                str(six_hours_ago),
+            )
+        )
 
         for session in reminder_sessions:
-            self.stdout.write('Session {} instructor {}:'.format(
-                str(session),
-                session.instructor.username,
-            ))
+            self.stdout.write(
+                "Session {} instructor {}:".format(
+                    str(session),
+                    session.instructor.username,
+                )
+            )
 
             if session.is_cancelled:
-                self.stdout.write('    Is cancelled, skipping.')
+                self.stdout.write("    Is cancelled, skipping.")
                 continue
 
             if session.course.id in [317, 273, 413]:
-                self.stdout.write('    Is members meeting or cleanup, skipping.')
+                self.stdout.write("    Is members meeting or cleanup, skipping.")
                 continue
 
-            if 'Event' in session.course.tags or 'Outing' in session.course.tags:
-                self.stdout.write('    Is partially outing or event, skipping.')
+            if "Event" in session.course.tags or "Outing" in session.course.tags:
+                self.stdout.write("    Is partially outing or event, skipping.")
                 continue
 
             if session.students.count() == 0:
-                self.stdout.write('    Class is empty, skipping.')
+                self.stdout.write("    Class is empty, skipping.")
                 continue
 
-            if session.students.filter(attendance_status='Attended').count() > 0:
-                self.stdout.write('    Instructor already marked attendance, skipping.')
+            if session.students.filter(attendance_status="Attended").count() > 0:
+                self.stdout.write("    Instructor already marked attendance, skipping.")
                 continue
 
-            self.stdout.write('    Emailing {} {}:'.format(session.instructor.username, session.instructor.email))
+            self.stdout.write(
+                "    Emailing {} {}:".format(
+                    session.instructor.username, session.instructor.email
+                )
+            )
 
-            utils.alert_tanner('Attendance reminder {} for {} {}'.format(
-                str(session),
-                session.instructor.username,
-                session.instructor.email,
-            ))
+            utils.alert_tanner(
+                "Attendance reminder {} for {} {}".format(
+                    str(session),
+                    session.instructor.username,
+                    session.instructor.email,
+                )
+            )
 
-            self.stdout.write('    Sent attendance reminder email.')
+            self.stdout.write("    Sent attendance reminder email.")
 
             count += 1
 
         return count
 
-
     def handle(self, *args, **options):
-        self.stdout.write('{} - Beginning hourly tasks'.format(str(now())))
+        self.stdout.write("{} - Beginning hourly tasks".format(str(now())))
         start = time.time()
 
         self.generate_stats()
-        self.stdout.write('Generated stats')
+        self.stdout.write("Generated stats")
 
-        #count = self.send_class_reminders()
-        #self.stdout.write('Sent {} class reminders'.format(count))
+        # count = self.send_class_reminders()
+        # self.stdout.write('Sent {} class reminders'.format(count))
 
         count = self.send_attendance_reminders()
-        self.stdout.write('Sent {} attendance reminders'.format(count))
+        self.stdout.write("Sent {} attendance reminders".format(count))
 
-        self.stdout.write('Completed tasks in {} s'.format(
-            str(time.time() - start)[:4]
-        ))
+        self.stdout.write(
+            "Completed tasks in {} s".format(str(time.time() - start)[:4])
+        )

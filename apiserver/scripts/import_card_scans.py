@@ -1,17 +1,23 @@
 # Expects a scans.csv of the historical scans in format:
 # date,card_number
 
-import django, sys, os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'apiserver.settings'
+import django
+import os
+
+os.environ["DJANGO_SETTINGS_MODULE"] = "apiserver.settings"
 django.setup()
 
 import csv
 from datetime import datetime, timedelta
 from apiserver.api import models
-from django.utils.timezone import now, pytz
+import zoneinfo
+
+tz = zoneinfo.ZoneInfo(key="America/Edmonton")
+
 
 def today_alberta_tz():
-    return datetime.now(pytz.timezone('America/Edmonton')).date()
+    return datetime.now(tz=tz).date()
+
 
 days = {}
 
@@ -20,19 +26,19 @@ while date <= today_alberta_tz():
     days[str(date)] = set()
     date += timedelta(days=1)
 
-print('Initialized with:')
+print("Initialized with:")
 print(days)
 
-with open('scans.csv', newline='') as csvfile:
+with open("scans.csv", newline="") as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
-        datetime_obj = datetime.strptime(row['date'], "%Y-%m-%d %H:%M:%S")
-        datetime_obj_utc = datetime_obj.replace(tzinfo=pytz.timezone('UTC'))
-        date = datetime_obj_utc.astimezone(pytz.timezone('America/Edmonton'))
+        datetime_obj = datetime.strptime(row["date"], "%Y-%m-%d %H:%M:%S")
+        datetime_obj_utc = datetime_obj.replace(tzinfo=zoneinfo.ZoneInfo("UTC"))
+        date = datetime_obj_utc.replace(tzinfo=tz).astimezone()
 
-        card = row['card_number']
+        card = row["card_number"]
 
-        print('Processing', date, card)
+        print("Processing", date, card)
         day = str(date.date())
 
         if day not in days:
@@ -50,5 +56,4 @@ for day, cards in days.items():
         defaults=dict(card_scans=len(cards)),
     )
 
-print('Done.')
-
+print("Done.")

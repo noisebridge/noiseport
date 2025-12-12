@@ -1,5 +1,4 @@
 from log import logger
-import time
 import secrets
 import subprocess
 import requests
@@ -9,114 +8,148 @@ from flask import abort
 
 HTTP_NOTFOUND = 404
 
-random_email = lambda: 'spaceport-' + str(uuid4()).split('-')[0] + '@protospace.ca'
+random_email = lambda: "spaceport-" + str(uuid4()).split("-")[0] + "@protospace.ca"
+
 
 def set_wiki_password(username, password):
     # sets a user's wiki password
     # creates the account if it doesn't exist
 
     if not secrets.WIKI_MAINTENANCE:
-        logger.error('Wiki setting not configured, aborting')
+        logger.error("Wiki setting not configured, aborting")
         abort(400)
 
     if not username:
-        logger.error('Empty username, aborting')
+        logger.error("Empty username, aborting")
         abort(400)
 
-    logger.info('Setting wiki password for: ' + username)
+    logger.info("Setting wiki password for: " + username)
 
     if not password:
-        logger.error('Empty password, aborting')
+        logger.error("Empty password, aborting")
         abort(400)
 
-    script = secrets.WIKI_MAINTENANCE + '/createAndPromote.php'
+    script = secrets.WIKI_MAINTENANCE + "/createAndPromote.php"
 
-    result = subprocess.run(['php', script, '--force', username, password],
-            shell=False, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    result = subprocess.run(
+        ["php", script, "--force", username, password],
+        shell=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
 
     output = result.stdout or result.stderr
     output = output.strip()
 
-    logger.info('Output: ' + output)
+    logger.info("Output: " + output)
 
     if result.stderr:
         abort(400)
 
+
 def discourse_api_get(url, params={}):
     headers = {
-        'Api-Key': secrets.DISCOURSE_API_KEY,
-        'Api-Username': secrets.DISCOURSE_API_USER,
+        "Api-Key": secrets.DISCOURSE_API_KEY,
+        "Api-Username": secrets.DISCOURSE_API_USER,
     }
     response = requests.get(url, headers=headers, params=params, timeout=10)
-    logger.debug('Response: %s %s', response.status_code, response.text)
+    logger.debug("Response: %s %s", response.status_code, response.text)
     response.raise_for_status()
     return response
+
 
 def discourse_api_put(url, data={}):
     headers = {
-        'Api-Key': secrets.DISCOURSE_API_KEY,
-        'Api-Username': secrets.DISCOURSE_API_USER,
+        "Api-Key": secrets.DISCOURSE_API_KEY,
+        "Api-Username": secrets.DISCOURSE_API_USER,
     }
     response = requests.put(url, headers=headers, data=data, timeout=10)
-    logger.debug('Response: %s %s', response.status_code, response.text)
+    logger.debug("Response: %s %s", response.status_code, response.text)
     response.raise_for_status()
     return response
+
 
 def discourse_api_post(url, data={}):
     headers = {
-        'Api-Key': secrets.DISCOURSE_API_KEY,
-        'Api-Username': secrets.DISCOURSE_API_USER,
+        "Api-Key": secrets.DISCOURSE_API_KEY,
+        "Api-Username": secrets.DISCOURSE_API_USER,
     }
     response = requests.post(url, headers=headers, data=data, timeout=10)
-    logger.debug('Response: %s %s', response.status_code, response.text)
+    logger.debug("Response: %s %s", response.status_code, response.text)
     response.raise_for_status()
     return response
+
 
 def discourse_api_delete(url, data={}):
     headers = {
-        'Api-Key': secrets.DISCOURSE_API_KEY,
-        'Api-Username': secrets.DISCOURSE_API_USER,
+        "Api-Key": secrets.DISCOURSE_API_KEY,
+        "Api-Username": secrets.DISCOURSE_API_USER,
     }
     response = requests.delete(url, headers=headers, data=data, timeout=10)
-    logger.debug('Response: %s %s', response.status_code, response.text)
+    logger.debug("Response: %s %s", response.status_code, response.text)
     response.raise_for_status()
     return response
 
+
 def discourse_rails_script(script):
-    result = subprocess.run(['docker', 'exec', '-i', secrets.DISCOURSE_CONTAINER, 'rails', 'runner', script],
-            shell=False, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+    result = subprocess.run(
+        [
+            "docker",
+            "exec",
+            "-i",
+            secrets.DISCOURSE_CONTAINER,
+            "rails",
+            "runner",
+            script,
+        ],
+        shell=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=60,
+    )
     output = result.stdout or result.stderr
-    output = output.strip() or 'No complaints'
+    output = output.strip() or "No complaints"
     return result, output
 
-def get_discourse_group_id(group_name):
-    logger.info('Getting the ID of group %s', group_name)
 
-    url = 'https://forum.protospace.ca/groups/{}.json'.format(group_name)
+def get_discourse_group_id(group_name):
+    logger.info("Getting the ID of group %s", group_name)
+
+    url = "https://forum.protospace.ca/groups/{}.json".format(group_name)
     response = discourse_api_get(url)
     response = response.json()
-    return response['group']['id']
+    return response["group"]["id"]
+
 
 def get_discourse_usernames():
     usernames = []
 
-    response = discourse_api_get('https://forum.protospace.ca/groups/trust_level_0/members.json?limit=1000')
+    response = discourse_api_get(
+        "https://forum.protospace.ca/groups/trust_level_0/members.json?limit=1000"
+    )
     response = response.json()
 
-    for user in response['members']:
-        usernames.append(user['username'])
+    for user in response["members"]:
+        usernames.append(user["username"])
 
-    response = discourse_api_get('https://forum.protospace.ca/groups/trust_level_0/members.json?limit=1000&offset=1000')
+    response = discourse_api_get(
+        "https://forum.protospace.ca/groups/trust_level_0/members.json?limit=1000&offset=1000"
+    )
     response = response.json()
 
-    for user in response['members']:
-        usernames.append(user['username'])
+    for user in response["members"]:
+        usernames.append(user["username"])
 
     if len(usernames) == 2000:
-        logger.error('Hit username limit, aborting! Tanner, fix this in the integration\'s get_discourse_usernames() function.')
+        logger.error(
+            "Hit username limit, aborting! Tanner, fix this in the integration's get_discourse_usernames() function."
+        )
         abort(400)
 
     return usernames
+
 
 def translate_usernames(portal_usernames, discourse_usernames):
     # the case of portal and discourse usernames might not match
@@ -138,6 +171,7 @@ def translate_usernames(portal_usernames, discourse_usernames):
 
     return result
 
+
 def set_discourse_password(username, password, first_name, email):
     # sets a user's discourse password
     # creates the account if it doesn't exist
@@ -149,89 +183,106 @@ def set_discourse_password(username, password, first_name, email):
     #   - existing Discourse user Spaceport signup with same email
     # note: Spaceport emails are unconfirmed!!
 
-    if not secrets.DISCOURSE_CONTAINER or not secrets.DISCOURSE_API_KEY or not secrets.DISCOURSE_API_USER:
-        logger.error('Discourse setting not configured, aborting')
+    if (
+        not secrets.DISCOURSE_CONTAINER
+        or not secrets.DISCOURSE_API_KEY
+        or not secrets.DISCOURSE_API_USER
+    ):
+        logger.error("Discourse setting not configured, aborting")
         abort(400)
 
     if not username:
-        logger.error('Empty username, aborting')
+        logger.error("Empty username, aborting")
         abort(400)
 
     if not password:
-        logger.error('Empty password, aborting')
+        logger.error("Empty password, aborting")
         abort(400)
 
     if not first_name:
-        logger.error('Empty first_name, aborting')
+        logger.error("Empty first_name, aborting")
         abort(400)
 
     if not email:
-        logger.error('Empty email, aborting')
+        logger.error("Empty email, aborting")
         abort(400)
 
     discourse_usernames = get_discourse_usernames()
     username = translate_usernames([username], discourse_usernames)[0]
 
-    logger.info('Checking Discourse for existing email: ' + email)
+    logger.info("Checking Discourse for existing email: " + email)
     params = {
-        'filter': email,
-        'show_emails': 'true',
+        "filter": email,
+        "show_emails": "true",
     }
-    response = discourse_api_get('https://forum.protospace.ca/admin/users/list/active.json', params)
+    response = discourse_api_get(
+        "https://forum.protospace.ca/admin/users/list/active.json", params
+    )
     response = response.json()
 
     for user in response:
-        if user['email'].lower() == email.lower():
-            if user['username'] == username:
-                logger.info('Username match, skipping')
+        if user["email"].lower() == email.lower():
+            if user["username"] == username:
+                logger.info("Username match, skipping")
                 continue
 
             new_email = random_email()
-            logger.info('Email found on different user %s, changing to: %s', user['username'], new_email)
+            logger.info(
+                "Email found on different user %s, changing to: %s",
+                user["username"],
+                new_email,
+            )
 
-            script = 'UserEmail.find_by(email: "{}").update!(email: "{}")'.format(email, new_email)
+            script = 'UserEmail.find_by(email: "{}").update!(email: "{}")'.format(
+                email, new_email
+            )
             result, output = discourse_rails_script(script)
 
-            logger.info('Confirming email change...')
-            response = discourse_api_get('https://forum.protospace.ca/admin/users/list/active.json', params)
+            logger.info("Confirming email change...")
+            response = discourse_api_get(
+                "https://forum.protospace.ca/admin/users/list/active.json", params
+            )
             if len(response.json()):
-                logger.error('Email change failed, aborting')
+                logger.error("Email change failed, aborting")
                 abort(400)
-
 
     user_exists = username in discourse_usernames
 
     if not user_exists:
-        logger.info('Creating Discourse user for: ' + username)
+        logger.info("Creating Discourse user for: " + username)
 
         data = {
-            'name': first_name,
-            'username': username,
-            'password': password,
-            'email': email,
-            'active': True,
-            'approved': True,
-            'user_fields[10]': 'Spaceport auth',
-            'user_fields[11]': 'other',
+            "name": first_name,
+            "username": username,
+            "password": password,
+            "email": email,
+            "active": True,
+            "approved": True,
+            "user_fields[10]": "Spaceport auth",
+            "user_fields[11]": "other",
         }
-        response = discourse_api_post('https://forum.protospace.ca/users.json', data)
+        response = discourse_api_post("https://forum.protospace.ca/users.json", data)
         response = response.json()
-        logger.info('Response: %s', response)
+        logger.info("Response: %s", response)
 
-        logger.info('Skipping set password')
+        logger.info("Skipping set password")
         return True
 
     else:
-        logger.info('User exists, setting Discourse password for: ' + username)
+        logger.info("User exists, setting Discourse password for: " + username)
 
-        script = 'User.find_by(username: "{}").update!(password: "{}")'.format(username, password)
+        script = 'User.find_by(username: "{}").update!(password: "{}")'.format(
+            username, password
+        )
         result, output = discourse_rails_script(script)
 
-        if 'Password is the same' in result.stderr:
-            logger.info('Output: Password is the same as your current password. (ActiveRecord::RecordInvalid)')
+        if "Password is the same" in result.stderr:
+            logger.info(
+                "Output: Password is the same as your current password. (ActiveRecord::RecordInvalid)"
+            )
             return True
         else:
-            logger.info('Output: ' + output)
+            logger.info("Output: " + output)
 
         if result.stderr:
             abort(400)
@@ -239,11 +290,11 @@ def set_discourse_password(username, password, first_name, email):
 
 def add_discourse_group_members(group_name, usernames):
     if not group_name:
-        logger.error('Empty group_name, aborting')
+        logger.error("Empty group_name, aborting")
         abort(400)
 
     if not usernames:
-        logger.error('Empty usernames, aborting')
+        logger.error("Empty usernames, aborting")
         abort(400)
 
     discourse_usernames = get_discourse_usernames()
@@ -251,41 +302,42 @@ def add_discourse_group_members(group_name, usernames):
     usernames = set(usernames)
     group_id = get_discourse_group_id(group_name)
 
-    logger.info('Filtering out usernames not on Discourse...')
+    logger.info("Filtering out usernames not on Discourse...")
 
     discourse_usernames = set(discourse_usernames)
     usernames = usernames & discourse_usernames
 
-    logger.info('Filtering out usernames that are already group members...')
+    logger.info("Filtering out usernames that are already group members...")
 
-    url = 'https://forum.protospace.ca/groups/{}/members.json?limit=1000'.format(group_name)
+    url = "https://forum.protospace.ca/groups/{}/members.json?limit=1000".format(
+        group_name
+    )
     response = discourse_api_get(url)
     response = response.json()
 
-    member_usernames = set([m['username'] for m in response['members']])
+    member_usernames = set([m["username"] for m in response["members"]])
     usernames = usernames - member_usernames
     usernames = list(usernames)
 
     if not len(usernames):
-        logger.info('Skipping, no one left to add')
+        logger.info("Skipping, no one left to add")
         return True
 
-    logger.info('Adding %s remaining usernames to the group...', len(usernames))
+    logger.info("Adding %s remaining usernames to the group...", len(usernames))
 
-    url = 'https://forum.protospace.ca/groups/{}/members.json'.format(group_id)
-    data = {
-        'usernames': ','.join(usernames)
-    }
+    url = "https://forum.protospace.ca/groups/{}/members.json".format(group_id)
+    data = {"usernames": ",".join(usernames)}
     discourse_api_put(url, data)
     return True
 
+
 def remove_discourse_group_members(group_name, usernames):
     if not group_name:
-        logger.error('Empty group_name, aborting')
+        logger.error("Empty group_name, aborting")
         abort(400)
 
     if not usernames:
-        logger.error('Empty usernames, aborting')
+        logger.error("Empty usernames, aborting")
         abort(400)
 
     discourse_usernames = get_discourse_usernames()
@@ -293,46 +345,46 @@ def remove_discourse_group_members(group_name, usernames):
     usernames = set(usernames)
     group_id = get_discourse_group_id(group_name)
 
-    logger.info('Filtering out usernames not on Discourse...')
+    logger.info("Filtering out usernames not on Discourse...")
 
     discourse_usernames = set(discourse_usernames)
     usernames = usernames & discourse_usernames
     usernames = list(usernames)
 
     if not len(usernames):
-        logger.info('Skipping, no one left to remove')
+        logger.info("Skipping, no one left to remove")
         return True
 
-    logger.info('Removing %s remaining usernames from the group...', len(usernames))
+    logger.info("Removing %s remaining usernames from the group...", len(usernames))
 
-    url = 'https://forum.protospace.ca/groups/{}/members.json'.format(group_id)
-    data = {
-        'usernames': ','.join(usernames)
-    }
+    url = "https://forum.protospace.ca/groups/{}/members.json".format(group_id)
+    data = {"usernames": ",".join(usernames)}
     discourse_api_delete(url, data)
     return True
 
+
 def change_discourse_username(username, new_username):
     if not username:
-        logger.error('Empty username, aborting')
+        logger.error("Empty username, aborting")
         abort(400)
 
     if not new_username:
-        logger.error('Empty new_username, aborting')
+        logger.error("Empty new_username, aborting")
         abort(400)
 
-    logger.info('Changing username %s to %s...', username, new_username)
+    logger.info("Changing username %s to %s...", username, new_username)
 
-    url = 'https://forum.protospace.ca/users/{}/preferences/username'.format(username)
+    url = "https://forum.protospace.ca/users/{}/preferences/username".format(username)
     data = {
-        'new_username': new_username,
+        "new_username": new_username,
     }
     discourse_api_put(url, data)
     return True
 
-if __name__ == '__main__':
-    #set_wiki_password('tanner.collin', 'protospace1')
-    set_discourse_password('test8a', 'protospace1', 'testie', 'test8@example.com')
-    #for u in get_discourse_usernames():
+
+if __name__ == "__main__":
+    # set_wiki_password('tanner.collin', 'protospace1')
+    set_discourse_password("test8a", "protospace1", "testie", "test8@example.com")
+    # for u in get_discourse_usernames():
     #    print(u)
-    #pass
+    # pass

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useReducer } from 'react';
-import { Switch, Route, Link, useHistory } from 'react-router-dom';
-import './semantic-ui/semantic.min.css';
+import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
+import 'semantic-ui-css/semantic.min.css';
 import './light.css';
 import './dark.css';
 import { Container, Dropdown, Menu } from 'semantic-ui-react';
@@ -42,7 +42,8 @@ function App() {
 	const [refreshCount, refreshUser] = useReducer(x => x + 1, 0);
 	const [yousure, setYousure] = useState(false);
 	const isDark = localStorage.getItem('darkmode', null) === 'true';  // inherited from Darkmode.js
-	const history = useHistory();
+	const navigate = useNavigate();
+	const location = useLocation();
 
 	useEffect(() => {
 		// note: theme also gets set below in the history.location useEffect
@@ -76,7 +77,7 @@ function App() {
 			setTokenCache('');
 			setUserCache(null);
 			setYousure(false);
-			history.push('/');
+			navigate('/');
 			window.scrollTo(0, 0);
 		} else {
 			setYousure(true);
@@ -84,7 +85,7 @@ function App() {
 	}
 
 	useEffect(() => {
-		if (history.location.pathname === '/classes/14640') {
+		if (location.pathname === '/classes/14640') {
 			// force Saturnalia class page to dark
 			document.body.className = 'dark';
 		} else {
@@ -95,13 +96,13 @@ function App() {
 			const data = {
 				id: user.member.id,
 				username: user.username,
-				path: history.location.pathname,
+				path: location.pathname,
 			};
 			requester('/ping/', 'POST', token, data)
 			.then(res => {
 				if (res.app_version > APP_VERSION) {
 					setUserCache(false);
-					history.push('/');
+					navigate('/');
 					window.location.reload();
 				}
 			})
@@ -113,12 +114,17 @@ function App() {
 				}
 			});
 		}
-	}, [history.location]);
+	}, [location]);
 
 	if (user && user?.app_version > APP_VERSION) {
 		setUserCache(false);
 		window.location.reload();
 	}
+
+	// Routes that should NOT display the menu/header (special display routes)
+	const isSpecialRoute = ['/classfeed', '/usage', '/display/lcars1', '/display/lcars2', '/display/lcars3'].some(
+		route => location.pathname.startsWith(route)
+	);
 
 	return (
 		<div>
@@ -127,28 +133,8 @@ function App() {
 			<div className='content-wrap'>
 			<div className='content-wrap-inside'>
 
-			<Switch>
-				<Route exact path='/classfeed'>
-					<ClassFeed />
-				</Route>
-
-				<Route exact path='/usage/:name'>
-					<Usage token={token} />
-				</Route>
-
-				<Route exact path='/display/lcars1'>
-					<LCARS1Display token={token} />
-				</Route>
-
-				<Route exact path='/display/lcars2'>
-					<LCARS2Display token={token} />
-				</Route>
-
-				<Route exact path='/display/lcars3'>
-					<LCARS3Display token={token} />
-				</Route>
-
-				<Route path='/'>
+			{!isSpecialRoute && (
+				<>
 					<Container>
 						<div className='hero'>
 							<Link to='/'>
@@ -260,162 +246,74 @@ function App() {
 							</Menu.Menu>
 						</Container>
 					</Menu>
+				</>
+			)}
 
-					<div className='topPadding'>
-						<Route exact path='/'>
-							<Home token={token} setTokenCache={setTokenCache} user={user} refreshUser={refreshUser} />
-						</Route>
+			<div className={isSpecialRoute ? '' : 'topPadding'}>
+				<Routes>
+					{/* Special routes without menu/header */}
+					<Route path='/classfeed' element={<ClassFeed />} />
+					<Route path='/usage/:name' element={<Usage token={token} />} />
+					<Route path='/display/lcars1' element={<LCARS1Display token={token} />} />
+					<Route path='/display/lcars2' element={<LCARS2Display token={token} />} />
+					<Route path='/display/lcars3' element={<LCARS3Display token={token} />} />
 
-						<Switch>
-							<Route path='/debug'>
-								<Debug token={token} user={user} />
-							</Route>
+					{/* Public routes */}
+					<Route path='/' element={<Home token={token} setTokenCache={setTokenCache} user={user} refreshUser={refreshUser} />} />
+					<Route path='/debug' element={<Debug token={token} user={user} />} />
+					<Route path='/password/reset/confirm/:uid/:token' element={<ConfirmReset />} />
+					<Route path='/password/reset' element={<PasswordReset />} />
+					<Route path='/utils' element={<Paste token={token} />} />
+					<Route path='/sign' element={<Sign token={token} />} />
+					<Route path='/out-of-stock' element={<OutOfStock token={token} />} />
+					<Route path='/charts' element={<Charts />} />
+					<Route path='/auth' element={<Auth token={token} user={user} />} />
+					<Route path='/subscribe' element={<Subscribe />} />
+					<Route path='/classes' element={<Classes token={token} user={user} refreshUser={refreshUser} />} />
+					<Route path='/add-new-tool' element={<AddNewTool token={token} />} />
+					<Route path='/garden' element={<Garden />} />
 
-							<Route path='/password/reset/confirm/:uid/:token'>
-								<ConfirmReset />
-							</Route>
-							<Route path='/password/reset'>
-								<PasswordReset />
-							</Route>
+					{/* Authenticated routes requiring token */}
+					{token && <Route path='/oidc' element={<AuthOIDC token={token} />} />}
 
-							<Route path='/utils'>
-								<Paste token={token} />
-							</Route>
+					{/* Routes requiring full user account setup */}
+					{user && user.member.set_details && (
+						<>
+							<Route path='/storage/:id' element={<StorageDetail token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/storage' element={<Storage token={token} user={user} />} />
+							<Route path='/claimshelf/:id' element={<ClaimShelf token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/claimshelf' element={<ClaimShelf token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/account' element={<Account token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/transactions/:id' element={<TransactionDetail token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/transactions' element={<Transactions user={user} />} />
+							<Route path='/paymaster' element={<Paymaster token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/cards' element={<Cards token={token} user={user} />} />
+							<Route path='/training' element={<Training user={user} />} />
+							<Route path='/quiz/scanner' element={<ScannerQuiz token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/quiz/sawstop' element={<SawstopQuiz token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/courses/:id' element={<CourseDetail token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/courses' element={<Courses token={token} user={user} />} />
+							<Route path='/classes/:id' element={<ClassDetail token={token} user={user} refreshUser={refreshUser} />} />
+							<Route path='/members/:id' element={<MemberDetail token={token} user={user} setUser={setUserCache}/>} />
+							<Route path='/members' element={<Members token={token} user={user} />} />
 
-							<Route path='/sign'>
-								<Sign token={token} />
-							</Route>
+							{isAdmin(user) && (
+								<>
+									<Route path='/admin' element={<Admin token={token} user={user} />} />
+									<Route path='/admintrans' element={<AdminTransactions token={token} user={user} />} />
+								</>
+							)}
+						</>
+					)}
 
-							<Route path='/out-of-stock'>
-								<OutOfStock token={token} />
-							</Route>
-
-							<Route path='/charts'>
-								<Charts />
-							</Route>
-
-							<Route path='/auth'>
-								<Auth token={token} user={user} />
-							</Route>
-
-							<Route path='/subscribe'>
-								<Subscribe />
-							</Route>
-
-							<Route exact path='/classes'>
-								<Classes token={token} user={user} refreshUser={refreshUser} />
-							</Route>
-
-							<Route exact path='/add-new-tool'>
-								<AddNewTool token={token} />
-							</Route>
-
-							<Route path='/garden'>
-								<Garden />
-							</Route>
-
-							{token ?
-								<Route path='/oidc'>
-									<AuthOIDC token={token} />
-								</Route>
-							:
-								<Route path='/:page'>
-									<PleaseLogin />
-								</Route>
-							}
-
-							{user && user.member.set_details ?
-								<Switch>
-									<Route path='/storage/:id'>
-										<StorageDetail token={token} user={user} refreshUser={refreshUser} />
-									</Route>
-
-									<Route path='/storage'>
-										<Storage token={token} user={user} />
-									</Route>
-
-									<Route path='/claimshelf/:id'>
-										<ClaimShelf token={token} user={user} refreshUser={refreshUser} />
-									</Route>
-									<Route path='/claimshelf'>
-										<ClaimShelf token={token} user={user} refreshUser={refreshUser} />
-									</Route>
-
-									<Route path='/account'>
-										<Account token={token} user={user} refreshUser={refreshUser} />
-									</Route>
-
-									<Route path='/transactions/:id'>
-										<TransactionDetail token={token} user={user} refreshUser={refreshUser} />
-									</Route>
-									<Route path='/transactions'>
-										<Transactions user={user} />
-									</Route>
-
-									<Route path='/paymaster'>
-										<Paymaster token={token} user={user} refreshUser={refreshUser} />
-									</Route>
-
-									<Route path='/cards'>
-										<Cards token={token} user={user} />
-									</Route>
-
-									<Route path='/training'>
-										<Training user={user} />
-									</Route>
-
-									<Route path='/quiz/scanner'>
-										<ScannerQuiz token={token} user={user} refreshUser={refreshUser} />
-									</Route>
-
-									<Route path='/quiz/sawstop'>
-										<SawstopQuiz token={token} user={user} refreshUser={refreshUser} />
-									</Route>
-
-									<Route path='/courses/:id'>
-										<CourseDetail token={token} user={user} refreshUser={refreshUser} />
-									</Route>
-
-									<Route path='/courses'>
-										<Courses token={token} user={user} />
-									</Route>
-
-									<Route path='/classes/:id'>
-										<ClassDetail token={token} user={user} refreshUser={refreshUser} />
-									</Route>
-
-									<Route path='/members/:id'>
-										<MemberDetail token={token} user={user} setUser={setUserCache}/>
-									</Route>
-									<Route path='/members'>
-										<Members token={token} user={user} />
-									</Route>
-
-									{user && isAdmin(user) &&
-										<Route path='/admin'>
-											<Admin token={token} user={user} />
-										</Route>
-									}
-
-									{user && isAdmin(user) &&
-										<Route path='/admintrans'>
-											<AdminTransactions token={token} user={user} />
-										</Route>
-									}
-
-									<Route path='/:page'>
-										<NotFound />
-									</Route>
-								</Switch>
-							:
-								<Route path='/:page'>
-									<PleaseLogin />
-								</Route>
-							}
-						</Switch>
-					</div>
-				</Route>
-			</Switch>
+					{/* Catch-all routes based on authentication state */}
+					{user && user.member.set_details ? (
+						<Route path='*' element={<NotFound />} />
+					) : (
+						<Route path='*' element={<PleaseLogin />} />
+					)}
+				</Routes>
+			</div>
 
 			</div>
 			</div>

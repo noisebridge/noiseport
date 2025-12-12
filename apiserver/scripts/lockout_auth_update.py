@@ -1,15 +1,18 @@
-import django, sys, os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'apiserver.settings'
+import django
+import os
+
+os.environ["DJANGO_SETTINGS_MODULE"] = "apiserver.settings"
 django.setup()
 
 import datetime
-import json
-from django.utils.timezone import now, pytz
-from apiserver.api import models, utils
+from apiserver.api import models
+import zoneinfo
 
 # Member orientation
-print('Updating member orientation dates')
-sessions = models.Session.objects.filter(course = 249)
+print("Updating member orientation dates")
+sessions = models.Session.objects.filter(course=249)
+tz = zoneinfo.ZoneInfo("America/Edmonton")
+
 
 def get_member(obj):
     # same as in serialzers.py -> get_cards for example
@@ -21,78 +24,90 @@ def get_member(obj):
 
 
 for session in sessions:
-    students = models.Training.objects.filter(session = session)
+    students = models.Training.objects.filter(session=session)
     for student in students:
-        if student.attendance_status == 'Attended':
+        if student.attendance_status == "Attended":
             member = get_member(student)
             if not member.orientation_date:
-                member.orientation_date = session.datetime.astimezone(pytz.timezone('America/Edmonton')).date()
+                member.orientation_date = session.datetime.astimezone(
+                    datetime.datetime.now().replace(tzinfo=tz)
+                ).date()
                 member.save()
 
 # Lathe
-print('Updating lathe training dates')
-sessions = models.Session.objects.filter(course = 281)
+print("Updating lathe training dates")
+sessions = models.Session.objects.filter(course=281)
 
 for session in sessions:
-    students = models.Training.objects.filter(session = session)
+    students = models.Training.objects.filter(session=session)
     for student in students:
-        if student.attendance_status == 'Attended':
+        if student.attendance_status == "Attended":
             member = get_member(student)
             if not member.lathe_cert_date:
-                member.lathe_cert_date = session.datetime.astimezone(pytz.timezone('America/Edmonton')).date()
+                member.lathe_cert_date = session.datetime.astimezone(
+                    datetime.datetime.now().replace(tzinfo=tz)
+                ).date()
                 member.save()
 
 # Manual Mill
-print('Updating mill training dates')
-sessions = models.Session.objects.filter(course = 283)
+print("Updating mill training dates")
+sessions = models.Session.objects.filter(course=283)
 
 for session in sessions:
-    students = models.Training.objects.filter(session = session)
+    students = models.Training.objects.filter(session=session)
     for student in students:
-        if student.attendance_status == 'Attended':
+        if student.attendance_status == "Attended":
             member = get_member(student)
             if not member.mill_cert_date:
-                member.mill_cert_date = session.datetime.astimezone(pytz.timezone('America/Edmonton')).date()
+                member.mill_cert_date = session.datetime.astimezone(
+                    datetime.datetime.now().replace(tzinfo=tz)
+                ).date()
                 member.save()
 
 
 # Woodworking tools
-print('Updating woodworking training dates')
-sessions = models.Session.objects.filter(course = 261)
+print("Updating woodworking training dates")
+sessions = models.Session.objects.filter(course=261)
 
 for session in sessions:
-    students = models.Training.objects.filter(session = session)
+    students = models.Training.objects.filter(session=session)
     for student in students:
-        if student.attendance_status == 'Attended':
+        if student.attendance_status == "Attended":
             member = get_member(student)
             if not member.wood_cert_date:
-                member.wood_cert_date = session.datetime.astimezone(pytz.timezone('America/Edmonton')).date()
+                member.wood_cert_date = session.datetime.astimezone(
+                    datetime.datetime.now().replace(tzinfo=tz)
+                ).date()
                 member.save()
 
 # Woodworking-2 tools
-print('Updating woodworking-2 training dates')
-sessions = models.Session.objects.filter(course = 401)
+print("Updating woodworking-2 training dates")
+sessions = models.Session.objects.filter(course=401)
 
 for session in sessions:
-    students = models.Training.objects.filter(session = session)
+    students = models.Training.objects.filter(session=session)
     for student in students:
-        if student.attendance_status == 'Attended':
+        if student.attendance_status == "Attended":
             member = get_member(student)
             if not member.wood2_cert_date:
-                member.wood2_cert_date = session.datetime.astimezone(pytz.timezone('America/Edmonton')).date()
+                member.wood2_cert_date = session.datetime.astimezone(
+                    datetime.datetime.now().replace(tzinfo=tz)
+                ).date()
                 member.save()
 
 # CNC tools
-print('Updating CNC training dates')
-sessions = models.Session.objects.filter(course = 259)
+print("Updating CNC training dates")
+sessions = models.Session.objects.filter(course=259)
 
 for session in sessions:
-    students = models.Training.objects.filter(session = session)
+    students = models.Training.objects.filter(session=session)
     for student in students:
-        if student.attendance_status == 'Attended':
+        if student.attendance_status == "Attended":
             member = get_member(student)
             if not member.cnc_cert_date:
-                member.cnc_cert_date = session.datetime.astimezone(pytz.timezone('America/Edmonton')).date()
+                member.cnc_cert_date = session.datetime.astimezone(
+                    datetime.datetime.now().replace(tzinfo=tz)
+                ).date()
                 member.save()
 
-print('Done.')
+print("Done.")

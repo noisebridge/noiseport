@@ -1,5 +1,5 @@
 import React from 'react';
-import moment from 'moment-timezone';
+import dayjs from 'dayjs';
 import { Container, Header, Image } from 'semantic-ui-react';
 import { staticUrl } from './utils.js';
 
@@ -8,7 +8,7 @@ export function Garden(props) {
 		<Container>
 			<Header size='large'>Protogarden</Header>
 
-			<Image src={staticUrl + '/garden-large.jpg?' + moment().unix()} />
+			<Image src={staticUrl + '/garden-large.jpg?' + dayjs().unix()} />
 		</Container>
 	);
 };
