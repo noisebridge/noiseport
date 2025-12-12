@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 
 import os
 import logging.config
-import warnings
 
 
 logger = logging.getLogger(__name__)

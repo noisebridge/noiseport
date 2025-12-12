@@ -1,9 +1,9 @@
 from django.urls import include, re_path
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import path
 from rest_framework import routers
-from dj_rest_auth.views import LoginView, LogoutView
+from dj_rest_auth.views import LogoutView
 
 from .api import views
 from . import secrets, settings
